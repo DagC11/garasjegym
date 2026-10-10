@@ -65,6 +65,54 @@ label.f { display:block; font-size:13px; color:var(--muted); margin:10px 0 4px; 
 .setrow .in { text-align:center; font-size:20px; font-weight:600; min-height:50px; padding:6px; }
 .setno { height:50px; border-radius:10px; font-weight:700; color:var(--muted); background:var(--card2); }
 .setrow.warm .setno { color:var(--warm); }
+/* Felles UI */
+.ico { fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; vertical-align:-4px; flex:none; }
+.ico circle[r="1.3"] { fill:currentColor; }
+.btn .ico { margin-right:4px; vertical-align:-4px; }
+.pagehead { display:flex; align-items:flex-end; justify-content:space-between; gap:10px; margin:6px 0 14px; }
+.pagehead h1 { margin:0; }
+.cap { text-transform:capitalize; }
+.sec-title { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); margin:22px 4px 8px; }
+.hscroll { display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; margin:0 -16px; padding:2px 16px; -webkit-overflow-scrolling:touch; }
+.hscroll::-webkit-scrollbar { display:none; } .hscroll > * { flex:none; }
+.card .hscroll { margin:0 -14px; padding:2px 14px; }
+.btn, .chip, .li, .iconbtn, .chk, .setno, .pesum { transition:transform .08s, opacity .08s; }
+.btn:active, .chip:active, .iconbtn:active, .chk:active { transform:scale(.96); }
+.li:active, .pesum:active { opacity:.6; }
+.chev { color:var(--muted); font-size:20px; line-height:1; }
+.card.li { display:flex; width:100%; }
+.card.list { padding:2px 14px; }
+.dayname { margin:2px 0 10px; font-size:22px; }
+.exlist { border-top:1px solid var(--line); }
+.exrow { display:flex; align-items:baseline; gap:8px; padding:8px 0; border-bottom:1px solid var(--line); font-size:15px; }
+.exrow .sslabel { width:20px; flex:none; }
+.exrow .exw { font-weight:700; white-space:nowrap; } .exrow .up { color:var(--ok); } .exrow .down { color:var(--bad); }
+.exrow .muted { font-size:13px; white-space:nowrap; }
+.empty-card { text-align:center; }
+.switch { width:48px; height:28px; border-radius:14px; background:var(--card2); border:1px solid var(--line); position:relative; flex:none; }
+.switch i { position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:var(--muted); transition:transform .15s, background .15s; }
+.switch.on { background:var(--acc); border-color:var(--acc); } .switch.on i { transform:translateX(20px); background:#fff; }
+.card.prog { display:flex; align-items:center; gap:8px; padding:12px 8px 12px 14px; }
+.card.prog > button.grow { text-align:left; min-width:0; }
+.card.prog .muted { display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }
+.iconbtn.danger { color:var(--bad); }
+.dayin { font-weight:700; font-size:17px; background:transparent; border-color:transparent; padding-left:2px; }
+.dayin:focus { background:var(--card2); }
+.perow { border-top:1px solid var(--line); }
+.pesum { display:flex; align-items:center; gap:8px; width:100%; text-align:left; padding:10px 2px; }
+.pesum .grow { display:flex; flex-direction:column; min-width:0; }
+.pesum .sslabel { width:20px; flex:none; }
+.perow.open { background:var(--card2); margin:0 -14px; padding:0 14px 12px; border-radius:10px; }
+.pebody .pe-grid input, .pebody .pe-grid select, .pebody input { background:var(--card); }
+.addbtn { margin-top:8px; color:var(--acc); border:0; padding-left:2px; }
+.lic { width:34px; height:34px; border-radius:9px; background:var(--card2); display:inline-grid; place-items:center; color:var(--acc); flex:none; }
+.setrow2 { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 0; }
+.setrow2 + .setrow2 { border-top:1px solid var(--line); }
+.setrow2 select { width:auto; min-width:130px; }
+.search { position:relative; } .search .ico { position:absolute; left:12px; top:13px; color:var(--muted); } .search input { padding-left:38px; }
+nav.tabs .ic { position:relative; display:inline-block; }
+nav.tabs .dot { position:absolute; top:-2px; right:-6px; width:8px; height:8px; border-radius:50%; background:var(--ok); }
+details summary { cursor:pointer; }
 svg.body { width:100%; max-width:440px; display:block; margin:0 auto; }
 svg.body .sil { fill:var(--m-sil); } svg.body .mm { fill:var(--m-off); stroke:var(--card); stroke-width:.8; }
 svg.body .mm.h1 { fill:color-mix(in srgb, var(--acc) 35%, var(--m-off)); } svg.body .mm.h2 { fill:color-mix(in srgb, var(--acc) 60%, var(--m-off)); }
@@ -103,7 +151,7 @@ nav.tabs { position:fixed; left:0; right:0; bottom:0; z-index:15; background:var
   padding:6px 8px calc(env(safe-area-inset-bottom) + 6px); display:flex; justify-content:center; }
 nav.tabs .in { display:flex; width:100%; max-width:720px; }
 nav.tabs button { flex:1; padding:6px 2px; font-size:12px; font-weight:600; color:var(--muted); display:flex; flex-direction:column; align-items:center; gap:2px; }
-nav.tabs button .ic { font-size:21px; line-height:1; }
+nav.tabs button .ic { line-height:1; height:24px; }
 nav.tabs button.on { color:var(--acc); }
 
 /* Ark (bunnark) */
@@ -515,6 +563,7 @@ function load() {
   }
   // Fyll inn nye standardfelt hvis appen er oppdatert
   for (const k in DEFAULT_IMPL) if (!db.settings.impl[k]) db.settings.impl[k] = clone(DEFAULT_IMPL[k]);
+  if (db.settings.impl.barbell.name === 'Olympisk stang (20 kg)') db.settings.impl.barbell.name = 'Olympisk stang';
   for (const e of db.settings.customEx || []) { e.prim = (e.prim || []).map(m => OLD_MUS[m] || m); e.sec = (e.sec || []).map(m => OLD_MUS[m] || m); }
   for (const p of Object.values(db.profiles)) {
     if (!p.activeIds) { p.activeIds = p.activeProgramId ? [p.activeProgramId] : []; delete p.activeProgramId; }
@@ -755,6 +804,25 @@ function tickInterval(el, a) {
 }
 setInterval(tick, 250);
 
+/* ---------- Ikoner (strektegnede, 24×24) ---------- */
+const ICONS = {
+  train: '<path d="M6.5 7v10M3.5 9.5v5M17.5 7v10M20.5 9.5v5M6.5 12h11"/>',
+  program: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3.5h6v3H9zM9 11h6M9 15h4"/>',
+  book: '<path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3M9 7h6"/>',
+  chart: '<path d="M4 20V11M10 20V5M16 20v-6M3 20h18"/>',
+  more: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
+  dots: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  trash: '<path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v6M14 11v6"/>',
+  search: '<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/>',
+  calc: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.5 7h7M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 16h.01M12 16h.01M15.5 16h.01"/>',
+  home: '<path d="M3.5 11 12 4l8.5 7M5.5 9.5V20h13V9.5M10 20v-5h4v5"/>',
+  plusbox: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 8.5v7M8.5 12h7"/>',
+  download: '<path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 20h14"/>',
+  upload: '<path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M5 20h14"/>',
+};
+const icon = (n, s = 22) => `<svg class="ico" width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n] || ''}</svg>`;
+
 /* ---------- Navigasjon og tilstand ---------- */
 const state = { tab: 'train', stack: [], picker: null, plateImpl: 'barbell', plateW: '100' };
 function go(tab) { state.tab = tab; state.stack = []; render(); window.scrollTo(0, 0); }
@@ -766,10 +834,10 @@ function render() {
   document.documentElement.dataset.theme = db.settings.theme === 'auto' ? (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') : db.settings.theme;
   const top = state.stack[state.stack.length - 1];
   let html;
-  if (top) html = ({ program: viewProgramEdit, exercise: viewExercise, workout: viewWorkoutDetail, plates: viewPlates, equipment: viewEquipment, customEx: viewCustomEx, library: viewLibrary })[top.type](top);
-  else html = ({ train: prof().active ? viewActive : viewTrain, programs: viewPrograms, progress: viewProgress, more: viewMore })[state.tab]();
-  const tabs = [['train', '🏋️', 'Trening'], ['programs', '📋', 'Program'], ['progress', '📈', 'Fremgang'], ['more', '⚙️', 'Mer']];
-  $('#app').innerHTML = html + `<nav class="tabs"><div class="in">${tabs.map(([k, ic, l]) => `<button class="${state.tab === k ? 'on' : ''}" data-act="tab" data-t="${k}"><span class="ic">${ic}</span>${l}${k === 'train' && prof().active ? ' •' : ''}</button>`).join('')}</div></nav>`;
+  if (top) html = ({ program: viewProgramEdit, exercise: viewExercise, workout: viewWorkoutDetail, plates: viewPlates, equipment: viewEquipment, customEx: viewCustomEx })[top.type](top);
+  else html = ({ train: prof().active ? viewActive : viewTrain, programs: viewPrograms, library: viewLibrary, progress: viewProgress, more: viewMore })[state.tab]();
+  const tabs = [['train', 'train', 'Trening'], ['programs', 'program', 'Program'], ['library', 'book', 'Bibliotek'], ['progress', 'chart', 'Fremgang'], ['more', 'more', 'Mer']];
+  $('#app').innerHTML = html + `<nav class="tabs"><div class="in">${tabs.map(([k, ic, l]) => `<button class="${state.tab === k ? 'on' : ''}" data-act="tab" data-t="${k}" aria-label="${l}"><span class="ic">${icon(ic)}${k === 'train' && prof().active ? '<i class="dot"></i>' : ''}</span>${l}</button>`).join('')}</div></nav>`;
   tick();
 }
 
@@ -804,17 +872,31 @@ function planSummary(pl) {
 }
 function programCard(prog) {
   const p = prof();
-  if (!prog.days.length) return `<div class="card"><h3>${esc(prog.name)}</h3><p class="muted">Programmet har ingen dager ennå.</p><button class="btn" data-act="editProgram" data-pid="${prog.id}">Rediger program</button></div>`;
+  if (!prog.days.length) return `<div class="card"><div class="muted small">${esc(prog.name)}</div><p class="muted">Programmet har ingen dager ennå.</p><button class="btn" data-act="editProgram" data-pid="${prog.id}">Legg til dager</button></div>`;
   const di = Math.min(p.progState[prog.id] || 0, prog.days.length - 1), d = prog.days[di], labels = ssLabels(d.ex);
   const onlyCardio = d.ex.every(x => EX(x.exId).type === 'cardio');
-  return `<div class="card"><div class="muted small">${esc(prog.name)}</div><div class="row between"><h2 style="margin:4px 0 8px">${esc(d.name)}</h2><span class="badge">≈ ${estMinutes(d.ex)} min</span></div>
-    ${onlyCardio ? d.ex.map(x => (x.note ? `<div class="cue">${esc(x.note)}</div>` : '') + planSummary(x.plan)).join('') :
-    `<div class="list">${d.ex.map((x, i) => { const ex = EX(x.exId), s = suggest(x, ex, p);
+  const body = onlyCardio ? d.ex.map(x => planCompact(x.plan)).join('') :
+    `<div class="exlist">${d.ex.map((x, i) => { const ex = EX(x.exId), s = suggest(x, ex, p);
       const tgt = ex.type === 'cardio' ? (x.plan ? Math.round(planSec(x.plan) / 60) + ' min' : 'Kondisjon') : `${x.sets} × ${x.min === x.max ? x.min : x.min + '–' + x.max}${ex.type === 'time' ? ' s' : ''}`;
-      return `<div class="li"><div class="grow"><div>${labels[i] ? `<span class="sslabel">${labels[i]}</span> ` : ''}${esc(ex.name)}</div><div class="muted small">${tgt}</div></div><div style="text-align:right;font-weight:700;${s.tone === 'up' ? 'color:var(--ok)' : s.tone === 'down' ? 'color:var(--bad)' : ''}">${s.w ? fmt(s.w) + ' kg' : ''}${s.tone === 'up' ? ' ↑' : s.tone === 'down' ? ' ↓' : ''}</div></div>`; }).join('')}</div>`}
-    <button class="btn acc big" style="margin-top:10px" data-act="startDay" data-pid="${prog.id}" data-d="${di}">Start ${esc(d.name)}</button>
-    ${prog.days.length > 1 ? `<div class="muted small" style="margin:12px 0 6px">Velg dag:</div><div class="row wrap">${prog.days.map((dd, i) => `<button class="chip ${i === di ? 'on' : ''}" data-act="pickDay" data-pid="${prog.id}" data-d="${i}">${esc(dd.name)}</button>`).join('')}</div>` : ''}
+      const w = `<span class="exw ${s.tone || ""}">${s.w ? fmt(s.w) + " kg" + (s.tone === "up" ? " ↑" : s.tone === "down" ? " ↓" : "") : ""}</span>`;
+      return `<div class="exrow"><span class="sslabel">${labels[i] || ''}</span><span class="grow">${esc(ex.name)} <span class="muted">${tgt}</span></span>${w}</div>`; }).join('')}</div>`;
+  return `<div class="card">
+    <div class="row between"><span class="muted small">${esc(prog.name)}</span><span class="muted small">${d.ex.length > 1 ? d.ex.length + ' øvelser · ' : ''}≈ ${estMinutes(d.ex)} min</span></div>
+    <h2 class="dayname">${esc(d.name)}</h2>${body}
+    <button class="btn acc big" style="margin-top:12px" data-act="startDay" data-pid="${prog.id}" data-d="${di}">Start økt</button>
+    ${prog.days.length > 1 ? `<div class="hscroll" style="margin-top:10px">${prog.days.map((dd, i) => `<button class="chip ${i === di ? 'on' : ''}" data-act="pickDay" data-pid="${prog.id}" data-d="${i}">${esc(dd.name)}</button>`).join('')}</div>` : ''}
   </div>`;
+}
+// Kompakt plan: like faser slås sammen («4× Drag 4:00»)
+function planCompact(pl) {
+  if (!pl?.length) return '';
+  const rows = [];
+  for (const s of pl) {
+    const base = s.t.replace(/ \d+\/\d+$/, '');
+    const hit = rows.find(r => r.base === base && r.s === s.s && r.z === s.z && base !== s.t);
+    if (hit) hit.n++; else rows.push({ base, s: s.s, z: s.z, n: 1 });
+  }
+  return `<div class="plan">${rows.map(r => `<div><span>${r.n > 1 ? r.n + '× ' : ''}${esc(r.base)}</span><span>${fmtDur(r.s)} ${zoneChip(r.z)}</span></div>`).join('')}</div>`;
 }
 function weekStrip() {
   const p = prof(), ws = weekStart(Date.now()), today = (new Date().getDay() + 6) % 7;
@@ -823,16 +905,16 @@ function weekStrip() {
 }
 function viewTrain() {
   const p = prof(), progs = activePrograms();
-  let html = `<div class="row between"><h1>Hei, ${esc(p.name)}</h1></div>
-    <div class="card"><div class="row between"><h3>Denne uka</h3><span class="muted small">${p.workouts.filter(w => w.date >= weekStart(Date.now())).length} økter</span></div>${weekStrip()}</div>`;
+  const today = new Date().toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long' });
+  let html = `<div class="pagehead"><div><div class="muted small cap">${today}</div><h1>Hei, ${esc(p.name)}</h1></div></div>
+    <div class="card"><div class="row between" style="margin-bottom:8px"><b>Denne uka</b><span class="muted small">${p.workouts.filter(w => w.date >= weekStart(Date.now())).length} økter</span></div>${weekStrip()}</div>`;
   if (!progs.length) {
-    html += `<div class="card"><h3>Velg et program</h3><p class="muted">Gå til Program-fanen og trykk «Bruk» på et program, eller start en tom økt.</p>
+    html += `<div class="card empty-card"><h3>Ingen aktive program</h3><p class="muted">Velg et program for å få neste økt med forslag til vekt her.</p>
       <button class="btn acc big" data-act="tab" data-t="programs">Velg program</button></div>`;
-  }
-  html += progs.map(programCard).join('');
-  html += `<button class="btn big" data-act="startEmpty">+ Start tom økt</button>`;
+  } else html += `<div class="sec-title">${progs.length > 1 ? 'Neste økter' : 'Neste økt'}</div>` + progs.map(programCard).join('');
+  html += `<button class="btn big" style="margin-top:4px" data-act="startEmpty">${icon('plus', 18)} Start tom økt</button>`;
   const last = p.workouts[p.workouts.length - 1];
-  if (last) html += `<h2>Forrige økt</h2><button class="card li" style="display:flex" data-act="openWorkout" data-wid="${last.id}"><div class="grow"><b>${esc(last.name)}</b><div class="muted small">${fmtDate(last.date)} · ${last.exercises.length} øvelser · ${last.exercises.reduce((a, e) => a + e.sets.filter(s => !s.warm).length, 0)} sett</div></div><span class="muted">›</span></button>`;
+  if (last) html += `<div class="sec-title">Forrige økt</div><button class="card li" data-act="openWorkout" data-wid="${last.id}"><div class="grow"><b>${esc(last.name)}</b><div class="muted small">${fmtDate(last.date)} · ${last.exercises.length} øvelser · ${last.exercises.reduce((a, e) => a + e.sets.filter(s => !s.warm).length, 0)} sett</div></div><span class="chev">›</span></button>`;
   return html;
 }
 
@@ -938,41 +1020,58 @@ function openPicker(mode, ctx) {
 /* ---------- Visning: Program ---------- */
 function viewPrograms() {
   const p = prof();
-  return `<h1>Program</h1>` + p.programs.map(pr => `<div class="card">
-      <div class="row"><div class="grow"><h3 style="margin:0">${esc(pr.name)}</h3><div class="muted small">${pr.days.length} dager${pr.note ? ' · ' + esc(pr.note) : ''}</div></div>${p.activeIds.includes(pr.id) ? '<span class="badge">Aktiv</span>' : ''}</div>
-      <div class="row wrap" style="margin-top:10px">${!p.activeIds.includes(pr.id) ? `<button class="btn sm acc" data-act="useProgram" data-pid="${pr.id}">Bruk</button>` : `<button class="btn sm" data-act="unuseProgram" data-pid="${pr.id}">Ikke aktiv</button>`}
-      <button class="btn sm" data-act="editProgram" data-pid="${pr.id}">Rediger</button><button class="btn sm" data-act="dupProgram" data-pid="${pr.id}">Kopier</button><button class="btn sm danger" style="margin-left:auto" data-act="delProgram" data-pid="${pr.id}">Slett</button></div></div>`).join('')
-    + `<div class="row"><button class="btn grow" data-act="newProgram">+ Nytt program</button><button class="btn grow" data-act="addTemplates">+ Fra biblioteket</button></div>`;
+  const card = pr => { const on = p.activeIds.includes(pr.id); return `<div class="card prog">
+      <button class="grow" data-act="editProgram" data-pid="${pr.id}"><b>${esc(pr.name)}</b><div class="muted small">${pr.days.length} ${pr.days.length === 1 ? 'dag' : 'dager'}${pr.note ? ' · ' + esc(pr.note) : ''}</div></button>
+      <button class="switch ${on ? 'on' : ''}" data-act="toggleProgram" data-pid="${pr.id}" role="switch" aria-checked="${on}" aria-label="Aktiv på Trening"><i></i></button>
+      <button class="iconbtn" data-act="progMenu" data-pid="${pr.id}" aria-label="Flere valg">${icon('dots')}</button></div>`; };
+  const act = p.programs.filter(x => p.activeIds.includes(x.id)), rest = p.programs.filter(x => !p.activeIds.includes(x.id));
+  return `<div class="pagehead"><h1>Program</h1><button class="btn sm acc" data-act="newProgramMenu">${icon('plus', 18)} Nytt</button></div>
+    <div class="muted small" style="margin:-6px 0 4px">Bryteren styrer hvilke program som vises under Trening. Trykk på et program for å redigere.</div>
+    ${act.length ? `<div class="sec-title">Aktive</div>${act.map(card).join('')}` : ''}
+    ${rest.length ? `<div class="sec-title">Andre program</div>${rest.map(card).join('')}` : ''}
+    ${!p.programs.length ? '<div class="empty">Ingen program ennå. Trykk «Nytt» for å lage et eller hente fra biblioteket.</div>' : ''}`;
 }
 function viewProgramEdit({ pid }) {
   const pr = prof().programs.find(x => x.id === pid);
   if (!pr) { state.stack.pop(); return viewPrograms(); }
-  const rules = [['double', 'Dobbel progresjon'], ['linear', 'Lineær'], ['none', 'Manuell']];
-  return `${backBtn()}<h1>Rediger program</h1>
-    <label class="f">Navn</label><input data-change="progField" data-pid="${pid}" data-f="name" value="${esc(pr.name)}">
-    <label class="f">Beskrivelse</label><input data-change="progField" data-pid="${pid}" data-f="note" value="${esc(pr.note || '')}">
-    ${pr.days.map((d, di) => `<div class="card" style="margin-top:14px">
-      <div class="row"><input class="grow" style="font-weight:700" data-change="dayName" data-pid="${pid}" data-d="${di}" value="${esc(d.name)}">
-      <button class="iconbtn" data-act="moveDay" data-pid="${pid}" data-d="${di}" data-dir="-1">↑</button><button class="iconbtn" data-act="moveDay" data-pid="${pid}" data-d="${di}" data-dir="1">↓</button>
-      <button class="iconbtn" data-act="delDay" data-pid="${pid}" data-d="${di}">🗑</button></div>
-      ${d.ex.map((x, i) => { const ex = EX(x.exId); return `<div style="border-top:1px solid var(--line);margin-top:10px;padding-top:10px">
-        <div class="row"><button class="grow" style="text-align:left" data-act="progSwap" data-pid="${pid}" data-d="${di}" data-i="${i}"><b>${esc(ex.name)}</b> <span class="muted small">bytt ›</span></button>
-        <button class="iconbtn" data-act="movePe" data-pid="${pid}" data-d="${di}" data-i="${i}" data-dir="-1">↑</button><button class="iconbtn" data-act="movePe" data-pid="${pid}" data-d="${di}" data-i="${i}" data-dir="1">↓</button>
-        <button class="iconbtn" data-act="delPe" data-pid="${pid}" data-d="${di}" data-i="${i}">×</button></div>
+  const rules = [['double', 'Dobbel'], ['linear', 'Lineær'], ['none', 'Manuell']];
+  const ruleName = { double: 'dobbel', linear: 'lineær', none: 'manuell' };
+  const a = (act, di, i, extra = '') => `data-act="${act}" data-pid="${pid}" data-d="${di}"${i != null ? ` data-i="${i}"` : ''} ${extra}`;
+  const f = (di, i, fld) => `data-change="peField" data-pid="${pid}" data-d="${di}" data-i="${i}" data-f="${fld}"`;
+  const exRow = (d, di) => (x, i) => {
+    const ex = EX(x.exId), key = `${pid}:${di}:${i}`, open = state.peOpen === key, lab = ssLabels(d.ex)[i];
+    const sum = ex.type === 'cardio' ? `${Math.round(planSec(x.plan) / 60) || '–'} min kondisjon`
+      : `${x.sets} × ${x.min === x.max ? x.min : x.min + '–' + x.max}${ex.type === 'time' ? ' s' : ''} · hvile ${fmtDur(x.rest || db.settings.rest)} · ${ruleName[x.rule] || ''}`;
+    return `<div class="perow ${open ? 'open' : ''}">
+      <button class="pesum" data-act="peToggle" data-k="${key}"><span class="sslabel">${lab || ''}</span><span class="grow"><b>${esc(ex.name)}</b><span class="muted small">${sum}</span></span><span class="chev">${open ? '⌃' : '⌄'}</span></button>
+      ${!open ? '' : `<div class="pebody">
         ${ex.type === 'cardio' ? planSummary(x.plan) : `<div class="pe-grid">
-          ${[['sets', 'Sett'], ['min', ex.type === 'time' ? 'Min sek' : 'Min reps'], ['max', ex.type === 'time' ? 'Maks sek' : 'Maks reps'], ['rest', 'Hvile (s)']].map(([f, l]) => `<div><label>${l}</label><input inputmode="numeric" data-change="peField" data-pid="${pid}" data-d="${di}" data-i="${i}" data-f="${f}" value="${x[f] ?? ''}"></div>`).join('')}
-          <div style="grid-column:span 3"><label>Progresjon</label><select data-change="peField" data-pid="${pid}" data-d="${di}" data-i="${i}" data-f="rule">${rules.map(([v, l]) => `<option value="${v}" ${x.rule === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
-          <div><label>Økning kg</label><input inputmode="decimal" data-change="peField" data-pid="${pid}" data-d="${di}" data-i="${i}" data-f="inc" value="${fmtIn(x.inc)}" placeholder="auto"></div>
-          <div><label>Supersett</label><select data-change="peField" data-pid="${pid}" data-d="${di}" data-i="${i}" data-f="ss">${['', 'A', 'B', 'C', 'D', 'E'].map(v => `<option value="${v}" ${(x.ss || '') === v ? 'selected' : ''}>${v || '–'}</option>`).join('')}</select></div></div>`}
-        <div style="margin-top:6px"><label class="tiny muted">Notat / teknikktips</label><input data-change="peField" data-pid="${pid}" data-d="${di}" data-i="${i}" data-f="note" value="${esc(x.note || '')}" placeholder="Valgfritt"></div></div>`; }).join('')}
-      <button class="btn sm" style="margin-top:12px" data-act="addPe" data-pid="${pid}" data-d="${di}">+ Legg til øvelse</button></div>`).join('')}
-    <button class="btn big" data-act="addDay" data-pid="${pid}">+ Legg til dag</button>
-    <div class="card small muted" style="margin-top:14px"><b>Progresjonsregler</b><br>
+          ${[['sets', 'Sett'], ['min', ex.type === 'time' ? 'Min sek' : 'Min reps'], ['max', ex.type === 'time' ? 'Maks sek' : 'Maks reps'], ['rest', 'Hvile (s)']].map(([k, l]) => `<div><label>${l}</label><input inputmode="numeric" ${f(di, i, k)} value="${x[k] ?? ''}"></div>`).join('')}
+          <div style="grid-column:span 2"><label>Progresjon</label><select ${f(di, i, 'rule')}>${rules.map(([v, l]) => `<option value="${v}" ${x.rule === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+          <div><label>Økning kg</label><input inputmode="decimal" ${f(di, i, 'inc')} value="${fmtIn(x.inc)}" placeholder="auto"></div>
+          <div><label>Supersett</label><select ${f(di, i, 'ss')}>${['', 'A', 'B', 'C', 'D', 'E'].map(v => `<option value="${v}" ${(x.ss || '') === v ? 'selected' : ''}>${v || '–'}</option>`).join('')}</select></div></div>`}
+        <label class="f">Notat / teknikktips</label><input ${f(di, i, 'note')} value="${esc(x.note || '')}" placeholder="Valgfritt">
+        <div class="row" style="margin-top:10px;gap:6px"><button class="btn sm" ${a('progSwap', di, i)}>Bytt øvelse</button><span class="grow"></span>
+          <button class="iconbtn" ${a('movePe', di, i, 'data-dir="-1"')} aria-label="Flytt opp">↑</button><button class="iconbtn" ${a('movePe', di, i, 'data-dir="1"')} aria-label="Flytt ned">↓</button>
+          <button class="iconbtn danger" ${a('delPe', di, i)} aria-label="Fjern">${icon('trash', 20)}</button></div></div>`}
+    </div>`;
+  };
+  return `${backBtn()}<div class="pagehead"><h1>Rediger program</h1><button class="iconbtn" data-act="progMenu" data-pid="${pid}" data-inedit="1" aria-label="Flere valg">${icon('dots')}</button></div>
+    <div class="card"><label class="f" style="margin-top:0">Navn</label><input data-change="progField" data-pid="${pid}" data-f="name" value="${esc(pr.name)}">
+      <label class="f">Beskrivelse</label><input data-change="progField" data-pid="${pid}" data-f="note" value="${esc(pr.note || '')}" placeholder="Valgfritt"></div>
+    ${pr.days.map((d, di) => `<div class="card day">
+      <div class="row"><input class="grow dayin" data-change="dayName" data-pid="${pid}" data-d="${di}" value="${esc(d.name)}" aria-label="Navn på dag">
+        <button class="iconbtn" ${a('dayMenu', di)} aria-label="Valg for dagen">${icon('dots')}</button></div>
+      <div class="muted small" style="margin:4px 2px 6px">${d.ex.length} øvelser · ≈ ${estMinutes(d.ex)} min</div>
+      ${d.ex.map(exRow(d, di)).join('')}
+      <button class="btn sm ghost addbtn" ${a('addPe', di)}>${icon('plus', 18)} Legg til øvelse</button></div>`).join('')}
+    <button class="btn big" data-act="addDay" data-pid="${pid}">${icon('plus', 18)} Legg til dag</button>
+    <details class="card small" style="margin-top:12px"><summary><b>Slik virker progresjonen</b></summary><div class="muted" style="margin-top:8px">
       <b>Dobbel:</b> jobb deg opp i reps innenfor intervallet. Når alle sett når maks reps, øker vekta neste gang.<br>
       <b>Lineær:</b> fast antall reps. Klarer du alle sett, øker vekta. Bommer du to økter på rad, går vekta ned 10 %.<br>
       <b>Manuell:</b> appen foreslår samme vekt som sist.<br>
-      <b>Økning «auto»:</b> 2,5 kg (5 kg på knebøy, markløft og benpress), neste manualvekt eller ett steg i vektmagasinet.</div>
-    <button class="btn danger big" style="margin-top:8px" data-act="delProgram" data-pid="${pid}">Slett program</button>`;
+      <b>Økning «auto»:</b> 2,5 kg (5 kg på knebøy, markløft og benpress), neste manualvekt eller ett steg i vektmagasinet.<br>
+      <b>Supersett:</b> gi øvelser samme bokstav, så tas de etter hverandre med hvile etter siste.</div></details>`;
 }
 
 /* ---------- Visning: Fremgang ---------- */
@@ -1017,7 +1116,7 @@ function viewProgress() {
   const exIds = [...new Set(p.workouts.flatMap(w => w.exercises.map(e => e.exId)))];
   const exRows = exIds.map(id => { const ex = EX(id), h = history(p, id, 9999); const best = h.reduce((a, x) => Math.max(a, bestOf(x.sets, ex).e), 0); return { ex, last: h[0]?.date || 0, best, n: h.length }; }).sort((a, b) => b.last - a.last);
   const bw = [...p.bw].sort((a, b) => a.date - b.date);
-  return `<h1>Fremgang</h1>
+  return `<div class="pagehead"><h1>Fremgang</h1></div>
     <div class="row" style="gap:8px"><div class="stat"><span class="muted small">Økter i uka</span><b>${thisWeek.length}</b></div><div class="stat"><span class="muted small">Sett</span><b>${sets}</b></div><div class="stat"><span class="muted small">Kondisjon</span><b>${fmt(cardioMin)} min</b></div></div>
     <div class="card" style="margin-top:12px"><h3>Økter per uke</h3><div class="row" style="align-items:flex-end;gap:6px;height:70px">${weeks.map((n, i) => `<div class="grow" style="text-align:center"><div style="height:${Math.max(4, n * 14)}px;background:${i === 7 ? 'var(--acc)' : 'var(--card2)'};border-radius:5px"></div><div class="tiny muted">${n}</div></div>`).join('')}</div><div class="muted tiny">Siste 8 uker</div></div>
     <div class="card"><div class="row between"><h3 style="margin:0">Muskler trent</h3>
@@ -1028,10 +1127,10 @@ function viewProgress() {
         ${untrained.length && untrained.length < 12 ? `<br><b>Ikke trent ${hw ? 'forrige uke' : 'ennå denne uka'}:</b> ${esc(untrained.join(', '))}.` : ''}</div>
       <details style="margin-top:10px"><summary class="small" style="cursor:pointer">Vis tall per muskel</summary>
       ${MUSCLES.map(m => `<div class="mbar"><span>${MUS[m]}</span><span class="tr"><i style="width:${100 * mus[m] / maxM}%"></i></span><span class="small" style="text-align:right">${fmt(mus[m])}</span></div>`).join('')}</details></div>
-    <h2>Øvelser</h2>${exRows.length ? `<div class="card list" style="padding:4px 14px">${exRows.map(r => `<button class="li" data-act="openExercise" data-ex="${r.ex.id}"><div class="grow"><div>${esc(r.ex.name)}</div><div class="muted small">${r.n} økter · sist ${fmtDate(r.last)}</div></div>${r.best ? `<div class="small" style="text-align:right"><b>${fmt(Math.round(r.best * 2) / 2)}</b><div class="muted tiny">est. 1RM</div></div>` : ''}<span class="muted">›</span></button>`).join('')}</div>` : '<div class="empty">Fullfør en økt for å se fremgang.</div>'}
-    <h2>Kroppsvekt</h2><div class="card"><div class="row"><input id="bwIn" inputmode="decimal" placeholder="kg" class="grow"><button class="btn acc" data-act="addBw">Lagre</button></div>
+    <div class="sec-title">Øvelser</div>${exRows.length ? `<div class="card list" style="padding:4px 14px">${exRows.map(r => `<button class="li" data-act="openExercise" data-ex="${r.ex.id}"><div class="grow"><div>${esc(r.ex.name)}</div><div class="muted small">${r.n} økter · sist ${fmtDate(r.last)}</div></div>${r.best ? `<div class="small" style="text-align:right"><b>${fmt(Math.round(r.best * 2) / 2)}</b><div class="muted tiny">est. 1RM</div></div>` : ''}<span class="chev">›</span></button>`).join("")}</div>` : '<div class="empty">Fullfør en økt for å se fremgang.</div>'}
+    <div class="sec-title">Kroppsvekt</div><div class="card"><div class="row"><input id="bwIn" inputmode="decimal" placeholder="kg" class="grow"><button class="btn acc" data-act="addBw">Lagre</button></div>
       <div style="margin-top:10px">${bw.length ? lineChart(bw.slice(-30).map(b => ({ x: b.date, y: b.kg })), 'kg') + `<div class="muted small">Sist: ${fmt(bw[bw.length - 1].kg)} kg (${fmtDate(bw[bw.length - 1].date)})</div>` : '<div class="muted small">Ingen registreringer ennå.</div>'}</div></div>
-    <h2>Historikk</h2>${p.workouts.length ? `<div class="card list" style="padding:4px 14px">${[...p.workouts].reverse().slice(0, 60).map(w => `<button class="li" data-act="openWorkout" data-wid="${w.id}"><div class="grow"><div>${esc(w.name)}</div><div class="muted small">${fmtDate(w.date)} · ${w.end ? Math.round((w.end - w.date) / 60000) + ' min · ' : ''}${w.exercises.length} øvelser</div></div><span class="muted">›</span></button>`).join('')}</div>` : '<div class="empty">Ingen økter ennå.</div>'}`;
+    <div class="sec-title">Historikk</div>${p.workouts.length ? `<div class="card list" style="padding:4px 14px">${[...p.workouts].reverse().slice(0, 60).map(w => `<button class="li" data-act="openWorkout" data-wid="${w.id}"><div class="grow"><div>${esc(w.name)}</div><div class="muted small">${fmtDate(w.date)} · ${w.end ? Math.round((w.end - w.date) / 60000) + ' min · ' : ''}${w.exercises.length} øvelser</div></div><span class="muted">›</span></button>`).join('')}</div>` : '<div class="empty">Ingen økter ennå.</div>'}`;
 }
 function viewExercise({ exId }) {
   const p = prof(), ex = EX(exId), h = history(p, exId, 9999).reverse();
@@ -1057,11 +1156,10 @@ function viewLibrary() {
     .sort((a, b) => a.name.localeCompare(b.name, 'nb'));
   const groups = [['', 'Alle'], ['chest', 'Bryst'], ['shoulder', 'Skuldre'], ['back', 'Rygg'], ['lower_back', 'Korsrygg'], ['biceps', 'Biceps'], ['triceps', 'Triceps'],
     ['core', 'Mage'], ['glutes', 'Sete'], ['quads', 'Forside lår'], ['hamstrings', 'Hamstring'], ['adductors', 'Innside lår'], ['calves', 'Legger']];
-  return `${backBtn()}<h1>Øvelser</h1>
-    <input type="search" data-filter="app" value="${esc(state.libQ || '')}" placeholder="Søk etter øvelse, utstyr eller muskel">
-    <div class="row wrap" style="margin:10px 0">${groups.map(([k, l]) => `<button class="chip ${mf === k ? 'on' : ''}" data-act="libM" data-m="${k}">${l}</button>`).join('')}</div>
-    <div class="muted small" style="margin-bottom:6px">${list.length} øvelser</div>
-    ${list.length ? `<div class="card list" style="padding:4px 14px">${list.map(ex => `<button class="li pick" data-act="openExercise" data-ex="${ex.id}" data-n="${esc(key(ex))}" ${q && !key(ex).includes(q) ? "hidden" : ""}><div class="grow"><div>${esc(ex.name)}</div><div class="muted small">${esc(implOf(ex).name)}${ex.prim.length ? ' · ' + esc(musNames(ex.prim)) : ''}</div></div><span class="muted">›</span></button>`).join('')}</div>` : '<div class="empty">Ingen øvelser passer søket.</div>'}`;
+  return `<div class="pagehead"><h1>Bibliotek</h1><span class="muted small">${list.length} øvelser</span></div>
+    <div class="search">${icon('search', 18)}<input type="search" data-filter="app" value="${esc(state.libQ || '')}" placeholder="Søk etter øvelse, utstyr eller muskel"></div>
+    <div class="hscroll" style="margin:10px -16px 12px">${groups.map(([k, l]) => `<button class="chip ${mf === k ? 'on' : ''}" data-act="libM" data-m="${k}">${l}</button>`).join('')}</div>
+    ${list.length ? `<div class="card list">${list.map(ex => `<button class="li pick" data-act="openExercise" data-ex="${ex.id}" data-n="${esc(key(ex))}" ${q && !key(ex).includes(q) ? 'hidden' : ''}><div class="grow"><div>${esc(ex.name)}</div><div class="muted small">${ex.prim.length ? esc(musNames(ex.prim)) + ' · ' : ''}${esc(implOf(ex).name)}</div></div><span class="chev">›</span></button>`).join('')}</div>` : '<div class="empty">Ingen øvelser i denne gruppen.</div>'}`;
 }
 function viewWorkoutDetail({ wid }) {
   const w = prof().workouts.find(x => x.id === wid);
@@ -1075,24 +1173,28 @@ function viewWorkoutDetail({ wid }) {
 /* ---------- Visning: Mer ---------- */
 function viewMore() {
   const p = prof(), s = db.settings;
-  return `<h1>Mer</h1>
-    <div class="card"><h3>Profil</h3><label class="f">Navn på denne profilen</label><input data-change="profName" value="${esc(p.name)}">
-      <label class="f">Makspuls (valgfritt, slag/min)</label><input inputmode="numeric" data-change="hrMax" value="${p.hrMax || ''}" placeholder="F.eks. 190">
-      <div class="muted tiny" style="margin-top:4px">Vet du den ikke? Et godt anslag er 211 − 0,64 × alder (NTNU). 35 år ≈ 189.</div>
-      ${Object.values(db.profiles).length > 1 ? `<div class="muted small" style="margin-top:10px">Bytt profil:</div><div class="row wrap" style="margin-top:6px">${Object.values(db.profiles).map(x => `<button class="chip ${x.id === p.id ? 'on' : ''}" data-act="switchProfile" data-id="${x.id}">${esc(x.name)}</button>`).join('')}</div>` : ''}
-      <button class="btn sm" style="margin-top:10px" data-act="addProfile">+ Ny profil på denne enheten</button></div>
-    <div class="card list" style="padding:4px 14px">
-      <button class="li" data-act="openLibrary"><span class="grow">📖 Øvelser – teknikk og muskelkart</span><span class="muted">›</span></button>
-      <button class="li" data-act="openPlates"><span class="grow">🧮 Skivekalkulator</span><span class="muted">›</span></button>
-      <button class="li" data-act="openEquipment"><span class="grow">🏠 Utstyr, skiver og maskiner</span><span class="muted">›</span></button>
-      <button class="li" data-act="openCustomEx"><span class="grow">➕ Egne øvelser (${(s.customEx || []).length})</span><span class="muted">›</span></button></div>
-    <div class="card"><h3>Innstillinger</h3>
-      <label class="f">Standard hviletid (sekunder)</label><input inputmode="numeric" data-change="setting" data-f="rest" value="${s.rest}">
-      <label class="f">Lyd når hvilen er over</label><select data-change="setting" data-f="sound"><option value="1" ${s.sound ? 'selected' : ''}>På</option><option value="0" ${!s.sound ? 'selected' : ''}>Av</option></select>
-      <label class="f">Tema</label><select data-change="setting" data-f="theme">${[['dark', 'Mørkt'], ['light', 'Lyst'], ['auto', 'Følg telefonen']].map(([v, l]) => `<option value="${v}" ${s.theme === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
-    <div class="card"><h3>Sikkerhetskopi</h3><p class="muted small">Alt lagres bare på denne telefonen. Ta en eksport av og til, og lagre den i Filer, Google Drive eller e-post.</p>
-      <div class="row"><button class="btn grow" data-act="export">Eksporter</button><button class="btn grow" data-act="import">Importer</button></div></div>
-    <p class="muted tiny" style="text-align:center">Garasjegym · data lagret lokalt</p>`;
+  const row = (act, ic, label, sub = '') => `<button class="li" data-act="${act}"><span class="lic">${icon(ic, 20)}</span><span class="grow">${label}${sub ? `<div class="muted small">${sub}</div>` : ''}</span><span class="chev">›</span></button>`;
+  return `<div class="pagehead"><h1>Mer</h1></div>
+    <div class="sec-title">Profil</div>
+    <div class="card"><label class="f" style="margin-top:0">Navn</label><input data-change="profName" value="${esc(p.name)}">
+      <label class="f">Makspuls (valgfritt, slag/min)</label><input inputmode="numeric" data-change="hrMax" value="${p.hrMax || ''}" placeholder="190">
+      <div class="muted tiny" style="margin-top:4px">Brukes til pulssoner på kondisjon. Anslag: 211 − 0,64 × alder (NTNU), f.eks. 35 år ≈ 189.</div>
+      ${Object.values(db.profiles).length > 1 ? `<label class="f">Bytt profil</label><div class="hscroll">${Object.values(db.profiles).map(x => `<button class="chip ${x.id === p.id ? 'on' : ''}" data-act="switchProfile" data-id="${x.id}">${esc(x.name)}</button>`).join('')}</div>` : ''}
+      <button class="btn sm ghost addbtn" style="margin-top:8px" data-act="addProfile">${icon('plus', 18)} Ny profil på denne telefonen</button></div>
+    <div class="sec-title">Verktøy og utstyr</div>
+    <div class="card list">
+      ${row('openPlates', 'calc', 'Skivekalkulator', 'Hvilke skiver skal på stanga')}
+      ${row('openEquipment', 'home', 'Utstyr, skiver og maskiner', 'Startvekter, skiveantall, manualer')}
+      ${row('openCustomEx', 'plusbox', 'Egne øvelser', (s.customEx || []).length + ' laget')}</div>
+    <div class="sec-title">Innstillinger</div>
+    <div class="card">
+      <div class="setrow2"><span>Standard hviletid</span><select data-change="setting" data-f="rest">${[60, 90, 120, 150, 180, 240].concat([s.rest]).filter((v, i, arr) => arr.indexOf(v) === i).sort((x, y) => x - y).map(v => `<option value="${v}" ${s.rest === v ? 'selected' : ''}>${fmtDur(v)}</option>`).join('')}</select></div>
+      <div class="setrow2"><span>Lyd når hvilen er over</span><button class="switch ${s.sound ? 'on' : ''}" data-act="toggleSetting" data-f="sound" role="switch" aria-checked="${!!s.sound}" aria-label="Lyd"><i></i></button></div>
+      <div class="setrow2"><span>Tema</span><select data-change="setting" data-f="theme">${[['dark', 'Mørkt'], ['light', 'Lyst'], ['auto', 'Som telefonen']].map(([v, l]) => `<option value="${v}" ${s.theme === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div></div>
+    <div class="sec-title">Sikkerhetskopi</div>
+    <div class="card"><p class="muted small" style="margin-top:0">Alt lagres bare på denne telefonen. Ta en eksport av og til og lagre den i Filer, Google Drive eller e-post.</p>
+      <div class="row"><button class="btn grow" data-act="export">${icon('download', 18)} Eksporter</button><button class="btn grow" data-act="import">${icon('upload', 18)} Importer</button></div></div>
+    <p class="muted tiny" style="text-align:center;margin-top:18px">Garasjegym · data lagret lokalt på telefonen</p>`;
 }
 function viewPlates() {
   const impls = Object.entries(db.settings.impl).filter(([, i]) => i.kind === 'plates');
@@ -1126,7 +1228,7 @@ function viewEquipment() {
 }
 function viewCustomEx() {
   const list = db.settings.customEx || [];
-  return `${backBtn()}<h1>Egne øvelser</h1>${list.length ? `<div class="card list" style="padding:4px 14px">${list.map(e => `<div class="li"><div class="grow"><div>${esc(e.name)}</div><div class="muted small">${esc(implOf(e).name)} · ${esc(musNames(e.prim))}</div></div><button class="iconbtn" data-act="delCustomEx" data-id="${e.id}">🗑</button></div>`).join('')}</div>` : '<div class="empty">Ingen egne øvelser ennå.</div>'}
+  return `${backBtn()}<h1>Egne øvelser</h1>${list.length ? `<div class="card list" style="padding:4px 14px">${list.map(e => `<div class="li"><div class="grow"><div>${esc(e.name)}</div><div class="muted small">${esc(implOf(e).name)} · ${esc(musNames(e.prim))}</div></div><button class="iconbtn danger" aria-label="Slett" data-act="delCustomEx" data-id="${e.id}">${icon("trash", 20)}</button></div>`).join('')}</div>` : '<div class="empty">Ingen egne øvelser ennå.</div>'}
     <button class="btn big" data-act="newCustomEx">+ Ny øvelse</button>`;
 }
 function customExForm() {
@@ -1200,12 +1302,12 @@ const ACT = {
   exMenu: d => {
     const a = P().active, e = a.exercises[+d.ei];
     sheet(`<h3>${esc(EX(e.exId).name)}</h3><div class="list">
-      <button class="li" data-act="swapEx" data-ei="${d.ei}">🔁 Bytt øvelse</button>
-      <button class="li" data-act="editRest" data-ei="${d.ei}">⏱ Endre hviletid (${fmtDur(e.pe.rest || db.settings.rest)})</button>
+      <button class="li" data-act="swapEx" data-ei="${d.ei}">Bytt øvelse</button>
+      <button class="li" data-act="editRest" data-ei="${d.ei}">Endre hviletid (${fmtDur(e.pe.rest || db.settings.rest)})</button>
       <button class="li" data-act="openExercise" data-ex="${e.exId}">ⓘ Om øvelsen og historikk</button>
-      <button class="li" data-act="moveEx" data-ei="${d.ei}" data-dir="-1">↑ Flytt opp</button>
-      <button class="li" data-act="moveEx" data-ei="${d.ei}" data-dir="1">↓ Flytt ned</button>
-      <button class="li" data-act="removeEx" data-ei="${d.ei}" style="color:var(--bad)">🗑 Fjern fra økta</button></div>`);
+      ${+d.ei > 0 ? `<button class="li" data-act="moveEx" data-ei="${d.ei}" data-dir="-1">↑ Flytt opp</button>` : ""}
+      ${+d.ei < a.exercises.length - 1 ? `<button class="li" data-act="moveEx" data-ei="${d.ei}" data-dir="1">↓ Flytt ned</button>` : ""}
+      <button class="li" data-act="removeEx" data-ei="${d.ei}" style="color:var(--bad)">${icon("trash", 20)} Fjern fra økta</button></div>`);
   },
   editRest: d => { const e = P().active.exercises[+d.ei]; const v = prompt('Hviletid i sekunder', e.pe.rest || db.settings.rest); if (v != null && num(v)) { e.pe.rest = num(v); save(); } closeSheet(); render(); },
   swapEx: d => openPicker('swap', { ei: +d.ei }),
@@ -1221,7 +1323,7 @@ const ACT = {
     if (pk.mode === 'progSwap') { const x = progById(pk.ctx.pid).days[pk.ctx.d].ex[pk.ctx.i]; x.exId = d.id; x.inc = null; x.note = ''; x.plan = null; }
     closeSheet(); save(); render();
   },
-  woMenu: () => sheet(`<h3>Økt</h3><div class="list"><button class="li" data-act="renameWo">✏️ Gi økta nytt navn</button><button class="li" data-act="cancelWo" style="color:var(--bad)">🗑 Avbryt og forkast økta</button></div>`),
+  woMenu: () => sheet(`<h3>Økt</h3><div class="list"><button class="li" data-act="renameWo">Gi økta nytt navn</button><button class="li" data-act="cancelWo" style="color:var(--bad)">${icon("trash", 20)} Avbryt og forkast økta</button></div>`),
   renameWo: () => { const a = P().active, v = prompt('Navn på økta', a.name); if (v) { a.name = v; save(); } closeSheet(); render(); },
   cancelWo: () => { if (confirm('Forkaste hele økta? Det som er logget blir ikke lagret.')) { P().active = null; releaseWake(); save(); } closeSheet(); render(); },
   finish: () => {
@@ -1269,21 +1371,35 @@ const ACT = {
   timerAdd: d => { const a = P().active; if (a?.restEnd) { a.restEnd += +d.s * 1000; a.restTotal = Math.max(1, (a.restTotal || 0) + +d.s); save(); tick(); } },
   timerStop: () => { const a = P().active; if (a) { a.restEnd = null; save(); } readyUntil = 0; tick(); },
   // Program
+  toggleProgram: d => { const p = P(), on = p.activeIds.includes(d.pid); p.activeIds = on ? p.activeIds.filter(x => x !== d.pid) : p.activeIds.concat(d.pid); save(); render(); flash(on ? 'Skjult fra Trening' : 'Vises nå under Trening'); },
+  progMenu: d => { const pr = progById(d.pid); sheet(`<h3>${esc(pr.name)}</h3><div class="list">
+      ${d.inedit ? '' : `<button class="li" data-act="editProgram" data-pid="${d.pid}">Rediger</button>`}
+      <button class="li" data-act="dupProgram" data-pid="${d.pid}">Lag en kopi</button>
+      <button class="li" data-act="delProgram" data-pid="${d.pid}" style="color:var(--bad)">${icon('trash', 20)} Slett program</button></div>`); },
+  newProgramMenu: () => sheet(`<h3>Nytt program</h3><div class="list">
+      <button class="li" data-act="addTemplates"><div class="grow"><b>Fra biblioteket</b><div class="muted small">Ferdige program tilpasset utstyret deres</div></div><span class="chev">›</span></button>
+      <button class="li" data-act="newProgram"><div class="grow"><b>Tomt program</b><div class="muted small">Bygg ditt eget fra bunnen</div></div><span class="chev">›</span></button></div>`),
+  dayMenu: d => { const pr = progById(d.pid); sheet(`<h3>${esc(pr.days[+d.d].name)}</h3><div class="list">
+      ${+d.d > 0 ? `<button class="li" data-act="moveDay" data-pid="${d.pid}" data-d="${d.d}" data-dir="-1">↑ Flytt opp</button>` : ''}
+      ${+d.d < pr.days.length - 1 ? `<button class="li" data-act="moveDay" data-pid="${d.pid}" data-d="${d.d}" data-dir="1">↓ Flytt ned</button>` : ''}
+      <button class="li" data-act="delDay" data-pid="${d.pid}" data-d="${d.d}" style="color:var(--bad)">${icon('trash', 20)} Slett dag</button></div>`); },
+  peToggle: d => { state.peOpen = state.peOpen === d.k ? null : d.k; render(); },
+  toggleSetting: d => { db.settings[d.f] = !db.settings[d.f]; save(); render(); },
   useProgram: d => { const p = P(); if (!p.activeIds.includes(d.pid)) p.activeIds.push(d.pid); save(); flash('Programmet vises nå på Trening'); render(); },
   unuseProgram: d => { const p = P(); p.activeIds = p.activeIds.filter(x => x !== d.pid); save(); render(); },
-  editProgram: d => push({ type: 'program', pid: d.pid }),
-  newProgram: () => { const pr = { id: uid(), name: 'Mitt program', note: '', days: [day('Dag 1', [])] }; P().programs.push(pr); save(); push({ type: 'program', pid: pr.id }); },
-  dupProgram: d => { const pr = clone(progById(d.pid)); pr.id = uid(); pr.name += ' (kopi)'; pr.days.forEach(x => x.id = uid()); P().programs.push(pr); save(); render(); },
+  editProgram: d => { closeSheet(); push({ type: 'program', pid: d.pid }); },
+  newProgram: () => { closeSheet(); const pr = { id: uid(), name: 'Mitt program', note: '', days: [day('Dag 1', [])] }; P().programs.push(pr); save(); push({ type: 'program', pid: pr.id }); },
+  dupProgram: d => { closeSheet(); const pr = clone(progById(d.pid)); pr.id = uid(); pr.name += ' (kopi)'; pr.days.forEach(x => x.id = uid()); P().programs.push(pr); save(); render(); },
   addTemplates: () => sheet(`<h3>Programbibliotek</h3><div class="list">${TEMPLATES().map((t, i) => `<button class="li" data-act="addTemplate" data-i="${i}"><div class="grow"><div><b>${esc(t.name)}</b></div><div class="muted small">${t.days.length} dager · ${esc(t.note || '')}</div></div><span class="chip">Legg til</span></button>`).join('')}</div>`),
   addTemplate: d => { const t = TEMPLATES()[+d.i], p = P(); p.programs.push(t); p.activeIds.push(t.id); save(); closeSheet(); flash('«' + t.name + '» er lagt til og aktivert'); render(); },
-  delProgram: d => { if (!confirm(`Slette «${progById(d.pid)?.name}»? Loggførte økter beholdes.`)) return; const p = P(); p.programs = p.programs.filter(x => x.id !== d.pid); p.activeIds = p.activeIds.filter(x => x !== d.pid); save(); back(); },
+  delProgram: d => { closeSheet(); if (!confirm(`Slette «${progById(d.pid)?.name}»? Loggførte økter beholdes.`)) return; const p = P(); p.programs = p.programs.filter(x => x.id !== d.pid); p.activeIds = p.activeIds.filter(x => x !== d.pid); save(); back(); },
   addDay: d => { const pr = progById(d.pid); pr.days.push(day('Dag ' + (pr.days.length + 1), [])); save(); render(); },
-  delDay: d => { if (!confirm('Slette dagen?')) return; progById(d.pid).days.splice(+d.d, 1); P().progState[d.pid] = 0; save(); render(); },
-  moveDay: d => { const l = progById(d.pid).days, i = +d.d, j = i + +d.dir; if (j >= 0 && j < l.length) [l[i], l[j]] = [l[j], l[i]]; save(); render(); },
+  delDay: d => { closeSheet(); if (!confirm('Slette dagen og øvelsene i den?')) return; state.peOpen = null; progById(d.pid).days.splice(+d.d, 1); P().progState[d.pid] = 0; save(); render(); },
+  moveDay: d => { closeSheet(); state.peOpen = null; const l = progById(d.pid).days, i = +d.d, j = i + +d.dir; if (j >= 0 && j < l.length) [l[i], l[j]] = [l[j], l[i]]; save(); render(); },
   addPe: d => openPicker('prog', { pid: d.pid, d: +d.d }),
   progSwap: d => openPicker('progSwap', { pid: d.pid, d: +d.d, i: +d.i }),
-  movePe: d => { const l = progById(d.pid).days[+d.d].ex, i = +d.i, j = i + +d.dir; if (j >= 0 && j < l.length) [l[i], l[j]] = [l[j], l[i]]; save(); render(); },
-  delPe: d => { progById(d.pid).days[+d.d].ex.splice(+d.i, 1); save(); render(); },
+  movePe: d => { const l = progById(d.pid).days[+d.d].ex, i = +d.i, j = i + +d.dir; if (j >= 0 && j < l.length) state.peOpen = `${d.pid}:${d.d}:${j}`; if (j >= 0 && j < l.length) [l[i], l[j]] = [l[j], l[i]]; save(); render(); },
+  delPe: d => { state.peOpen = null; progById(d.pid).days[+d.d].ex.splice(+d.i, 1); save(); render(); },
   // Fremgang
   openExercise: d => { closeSheet(); push({ type: 'exercise', exId: d.ex }); },
   delWorkout: d => { if (!confirm('Slette økta permanent?')) return; const p = P(); p.workouts = p.workouts.filter(w => w.id !== d.wid); save(); back(); },
@@ -1292,7 +1408,7 @@ const ACT = {
   switchProfile: d => { if (P().active && d.id !== db.current) flash('Økta til ' + P().name + ' er lagret og venter'); db.current = d.id; save(); go('train'); },
   addProfile: () => { const n = prompt('Navn på ny profil'); if (!n) return; const p = newProfile(n); db.profiles[p.id] = p; db.current = p.id; save(); go('train'); },
   openPlates: () => push({ type: 'plates' }),
-  openLibrary: () => push({ type: 'library' }),
+  openLibrary: () => go('library'),
   libM: d => { state.libM = d.m; render(); },
   heatWeek: d => { state.heatWeek = +d.w; render(); },
   musInfo: d => { const n = state.heatMus?.[d.m] || 0; flash(`${MUS[d.m]}: ${fmt(n)} sett ${state.heatWeek ? 'forrige uke' : 'denne uka'}`); },
