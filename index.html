@@ -711,10 +711,21 @@ function openPicker(mode, ctx) {
   if (mode === 'progSwap') { const pr = prof().programs.find(x => x.id === ctx.pid); cur = EX(pr.days[ctx.d].ex[ctx.i].exId); }
   const item = ex => `<button class="li pick" data-act="pickEx" data-id="${ex.id}" data-n="${esc((ex.name + ' ' + implOf(ex).name + ' ' + ex.prim.join(' ')).toLowerCase())}"><div class="grow"><div>${esc(ex.name)}</div><div class="muted small">${esc(implOf(ex).name)}${ex.prim.length ? ' · ' + esc(ex.prim.join(', ')) : ''}</div></div></button>`;
   let html = `<h3>${cur ? 'Bytt ut ' + esc(cur.name) : 'Velg øvelse'}</h3><input type="search" data-filter="1" placeholder="Søk …" style="margin:8px 0">`;
-  if (cur) { const same = list.filter(x => x.pat === cur.pat && x.id !== cur.id); if (same.length) html += `<div class="muted small pickhead" style="margin-top:8px">Samme bevegelse (${esc(PATTERNS[cur.pat] || '')})</div><div class="list">${same.map(item).join('')}</div>`; }
-  const groups = {};
-  list.forEach(ex => (groups[ex.impl] = groups[ex.impl] || []).push(ex));
-  for (const k of Object.keys(groups)) html += `<div class="muted small pickhead" style="margin-top:14px">${esc(db.settings.impl[k]?.name || k)}</div><div class="list">${groups[k].map(item).join('')}</div>`;
+  if (cur) {
+    // Ved bytte: bare øvelser med samme bevegelse, eller med samme viktigste muskel (første i prim)
+    const sameMus = x => !!cur.prim[0] && x.prim[0] === cur.prim[0];
+    const same = list.filter(x => x.id !== cur.id && x.pat === cur.pat);
+    const other = list.filter(x => x.id !== cur.id && x.pat !== cur.pat && sameMus(x));
+    const main = (cur.prim[0] || PATTERNS[cur.pat] || 'det samme').toLowerCase();
+    html += `<div class="muted small" style="margin-bottom:4px">Viser øvelser som trener ${esc(main)}.</div>`;
+    if (same.length) html += `<div class="muted small pickhead" style="margin-top:8px">Samme bevegelse (${esc(PATTERNS[cur.pat] || '')})</div><div class="list">${same.map(item).join('')}</div>`;
+    if (other.length) html += `<div class="muted small pickhead" style="margin-top:14px">Andre øvelser for ${esc(main)}</div><div class="list">${other.map(item).join('')}</div>`;
+    if (!same.length && !other.length) html += `<div class="empty">Ingen andre øvelser trener det samme. Lag en egen øvelse under.</div>`;
+  } else {
+    const groups = {};
+    list.forEach(ex => (groups[ex.impl] = groups[ex.impl] || []).push(ex));
+    for (const k of Object.keys(groups)) html += `<div class="muted small pickhead" style="margin-top:14px">${esc(db.settings.impl[k]?.name || k)}</div><div class="list">${groups[k].map(item).join('')}</div>`;
+  }
   html += `<button class="btn" style="margin-top:14px;width:100%" data-act="newCustomEx">+ Lag egen øvelse</button>`;
   sheet(html);
 }
