@@ -17,11 +17,13 @@
   --bg:#0f1216; --card:#181d23; --card2:#212830; --line:#2b333d; --text:#eef1f4; --muted:#8e99a6;
   --acc:#ff7a1a; --acc-ink:#1a0d00; --acc-soft:rgba(255,122,26,.14); --ok:#35c98a; --ok-soft:rgba(53,201,138,.16);
   --bad:#ff6161; --warm:#5aa9ff; --radius:14px;
+  --m-sil:#232a32; --m-off:#3a434e; --m-sec:#a8622f;
 }
 :root[data-theme="light"] {
   --bg:#f2f3f5; --card:#ffffff; --card2:#eceef1; --line:#d9dde3; --text:#13171c; --muted:#5d6876;
   --acc:#e5620a; --acc-ink:#fff; --acc-soft:rgba(229,98,10,.12); --ok:#13915c; --ok-soft:rgba(19,145,92,.13);
   --bad:#d13a3a; --warm:#2a74d0;
+  --m-sil:#e6e9ed; --m-off:#c9cfd6; --m-sec:#f6b98a;
 }
 * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 html, body { margin:0; background:var(--bg); color:var(--text); }
@@ -63,6 +65,12 @@ label.f { display:block; font-size:13px; color:var(--muted); margin:10px 0 4px; 
 .setrow .in { text-align:center; font-size:20px; font-weight:600; min-height:50px; padding:6px; }
 .setno { height:50px; border-radius:10px; font-weight:700; color:var(--muted); background:var(--card2); }
 .setrow.warm .setno { color:var(--warm); }
+svg.body { width:100%; max-width:440px; display:block; margin:0 auto; }
+svg.body .sil { fill:var(--m-sil); } svg.body .mm { fill:var(--m-off); stroke:var(--card); stroke-width:.8; }
+svg.body .mm.p { fill:var(--acc); } svg.body .mm.s { fill:var(--m-sec); } svg.body text { fill:var(--muted); font-size:12px; }
+.mchip { display:inline-block; font-size:13px; font-weight:600; padding:4px 10px; border-radius:8px; margin:0 6px 6px 0; }
+.mchip.p { background:var(--acc); color:var(--acc-ink); } .mchip.s { background:var(--acc-soft); color:var(--acc); }
+.how { padding-left:20px; margin:6px 0 12px; } .how li { margin-bottom:6px; }
 .card.ss { border-left:4px solid var(--warm); }
 .sslabel { font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--warm); }
 .cue { font-size:14px; color:var(--muted); font-style:italic; margin-top:6px; }
@@ -103,7 +111,7 @@ nav.tabs button.on { color:var(--acc); }
 .weekdots { display:flex; gap:6px; } .weekdots span { flex:1; text-align:center; font-size:12px; color:var(--muted); }
 .weekdots i { display:block; height:30px; border-radius:8px; background:var(--card2); margin-bottom:4px; }
 .weekdots i.on { background:var(--acc); } .weekdots i.today { outline:2px solid var(--acc); outline-offset:-2px; }
-.mbar { display:grid; grid-template-columns:96px 1fr 34px; gap:8px; align-items:center; font-size:14px; margin:6px 0; }
+.mbar { display:grid; grid-template-columns:128px 1fr 34px; gap:8px; align-items:center; font-size:14px; margin:6px 0; }
 .mbar .tr { height:10px; background:var(--card2); border-radius:5px; overflow:hidden; position:relative; }
 .mbar .tr i { display:block; height:100%; background:var(--acc); border-radius:5px; }
 .stat { flex:1; background:var(--card2); border-radius:12px; padding:10px; }
@@ -164,72 +172,257 @@ const DEFAULT_PLATES = { '20': 6, '15': 2, '10': 4, '5': 4, '2.5': 4, '1.25': 4,
 const PLATE_COLORS = { '20': '#2f6fde', '15': '#f2c230', '10': '#2fa865', '5': '#e8e8e8', '2.5': '#e04848', '1.25': '#9aa3ad', '0.5': '#c7ccd2' };
 
 /* ---------- Øvelser ---------- */
-const MUSCLES = ['Bryst', 'Rygg', 'Skuldre', 'Biceps', 'Triceps', 'Forside lår', 'Hamstring', 'Sete', 'Legger', 'Mage', 'Korsrygg'];
+// Muskler: id → navn. Gruppene brukes ved bytte av øvelse (samme gruppe = samme muskelgruppe).
+const MUS = { chest: 'Bryst', front_delt: 'Fremre skulder', side_delt: 'Sideskulder', rear_delt: 'Bakre skulder', traps: 'Trapes', upper_back: 'Øvre rygg',
+  lats: 'Brede ryggmuskel', lower_back: 'Korsrygg', biceps: 'Biceps', triceps: 'Triceps', forearm: 'Underarm', abs: 'Mage', obliques: 'Skrå mage',
+  glutes: 'Sete', quads: 'Forside lår', hamstrings: 'Hamstring', adductors: 'Innside lår', calves: 'Legger' };
+const MUSCLES = Object.keys(MUS);
+const MUS_GROUP = { chest: 'chest', front_delt: 'shoulder', side_delt: 'shoulder', rear_delt: 'shoulder', traps: 'back', upper_back: 'back', lats: 'back',
+  lower_back: 'lower_back', biceps: 'biceps', triceps: 'triceps', forearm: 'forearm', abs: 'core', obliques: 'core', glutes: 'glutes', quads: 'quads',
+  hamstrings: 'hamstrings', adductors: 'adductors', calves: 'calves' };
+const OLD_MUS = { 'Bryst': 'chest', 'Rygg': 'lats', 'Skuldre': 'front_delt', 'Biceps': 'biceps', 'Triceps': 'triceps', 'Forside lår': 'quads',
+  'Hamstring': 'hamstrings', 'Sete': 'glutes', 'Legger': 'calves', 'Mage': 'abs', 'Korsrygg': 'lower_back' };
+const musNames = ids => ids.map(m => MUS[m] || m).join(', ');
 const PATTERNS = { squat: 'Knebøy / benpress', hinge: 'Hofte-hengsel', hpush: 'Horisontal press', vpush: 'Vertikal press', hpull: 'Roing',
   vpull: 'Nedtrekk / pull-ups', lunge: 'Ettbens', quad_iso: 'Lår (isolasjon)', ham_iso: 'Hamstring (isolasjon)', glute: 'Sete',
   backext: 'Rygg-/hofteekstensjon', calf: 'Legger', biceps: 'Biceps', triceps: 'Triceps', side_delt: 'Sideskulder', rear_delt: 'Bakre skulder',
   shrug: 'Trapes', core: 'Mage', cardio: 'Kondisjon' };
-const E = (id, name, impl, pat, prim, sec = [], o = {}) => ({ id, name, impl, pat, prim, sec, type: o.type || 'reps', needs: o.needs || null, inc: o.inc ?? null });
+// o.how = steg for utførelse, o.err = vanlige feil
+const E = (id, name, impl, pat, prim, sec = [], o = {}) => ({ id, name, impl, pat, prim, sec, type: o.type || 'reps', needs: o.needs || null, inc: o.inc ?? null, how: o.how || null, err: o.err || '' });
 const BUILTIN = [
-  E('squat', 'Knebøy', 'barbell', 'squat', ['Forside lår', 'Sete'], ['Korsrygg', 'Mage'], { inc: 5 }),
-  E('ssb_squat', 'Knebøy (safety bar)', 'ssb', 'squat', ['Forside lår', 'Sete'], ['Korsrygg'], { inc: 5 }),
-  E('front_squat', 'Frontbøy', 'barbell', 'squat', ['Forside lår'], ['Sete', 'Mage']),
-  E('deadlift', 'Markløft', 'barbell', 'hinge', ['Hamstring', 'Sete', 'Korsrygg'], ['Rygg', 'Forside lår'], { inc: 5 }),
-  E('rdl', 'Rumensk markløft', 'barbell', 'hinge', ['Hamstring', 'Sete'], ['Korsrygg'], { inc: 5 }),
-  E('good_morning', 'Good morning (safety bar)', 'ssb', 'hinge', ['Hamstring', 'Korsrygg'], ['Sete']),
-  E('bench', 'Benkpress', 'barbell', 'hpush', ['Bryst'], ['Triceps', 'Skuldre'], { needs: 'bench' }),
-  E('incline_bench', 'Skrå benkpress', 'barbell', 'hpush', ['Bryst', 'Skuldre'], ['Triceps'], { needs: 'bench' }),
-  E('cg_bench', 'Benkpress, smalt grep', 'barbell', 'hpush', ['Triceps', 'Bryst'], ['Skuldre'], { needs: 'bench' }),
-  E('ohp', 'Skulderpress stående', 'barbell', 'vpush', ['Skuldre'], ['Triceps']),
-  E('bb_row', 'Stangroing', 'barbell', 'hpull', ['Rygg'], ['Biceps', 'Korsrygg']),
-  E('hip_thrust', 'Hip thrust', 'barbell', 'glute', ['Sete'], ['Hamstring'], { needs: 'bench', inc: 5 }),
-  E('ez_curl', 'Curl (EZ-stang)', 'ez', 'biceps', ['Biceps'], [], { inc: 1 }),
-  E('skull', 'Skullcrusher (EZ-stang)', 'ez', 'triceps', ['Triceps'], [], { needs: 'bench', inc: 1 }),
-  E('smith_squat', 'Knebøy i smith', 'smith', 'squat', ['Forside lår', 'Sete'], [], { inc: 5 }),
-  E('smith_bench', 'Benkpress i smith', 'smith', 'hpush', ['Bryst'], ['Triceps', 'Skuldre'], { needs: 'bench' }),
-  E('smith_incline', 'Skrå benkpress i smith', 'smith', 'hpush', ['Bryst', 'Skuldre'], ['Triceps'], { needs: 'bench' }),
-  E('smith_ohp', 'Skulderpress i smith (sittende)', 'smith', 'vpush', ['Skuldre'], ['Triceps'], { needs: 'bench' }),
-  E('smith_row', 'Roing i smith', 'smith', 'hpull', ['Rygg'], ['Biceps']),
-  E('smith_split', 'Splittknebøy i smith', 'smith', 'lunge', ['Forside lår', 'Sete'], []),
-  E('smith_hipthrust', 'Hip thrust i smith', 'smith', 'glute', ['Sete'], ['Hamstring'], { needs: 'bench', inc: 5 }),
-  E('smith_calf', 'Tåhev i smith', 'smith', 'calf', ['Legger'], [], { inc: 5 }),
-  E('tbar_row', 'T-bar roing (landmine)', 'landmine', 'hpull', ['Rygg'], ['Biceps']),
-  E('landmine_press', 'Landmine press', 'landmine', 'vpush', ['Skuldre', 'Bryst'], ['Triceps']),
-  E('legpress', 'Benpress (sittende)', 'legpress', 'squat', ['Forside lår', 'Sete'], [], { inc: 5 }),
-  E('hack', 'Hacklift (hack squat)', 'legpress', 'squat', ['Forside lår', 'Sete'], [], { inc: 5 }),
-  E('lp_calf', 'Tåhev i benpress', 'legpress', 'calf', ['Legger'], [], { inc: 5 }),
-  E('leg_ext', 'Leg extension', 'legext', 'quad_iso', ['Forside lår']),
-  E('leg_curl', 'Leg curl', 'legext', 'ham_iso', ['Hamstring']),
-  E('rev_hyper', 'Reverse hyper', 'hyper', 'backext', ['Sete', 'Korsrygg', 'Hamstring']),
-  E('back_ext', 'Rygghev', 'backext', 'backext', ['Korsrygg', 'Sete', 'Hamstring']),
-  E('pulldown', 'Nedtrekk, bredt grep', 'cable', 'vpull', ['Rygg'], ['Biceps']),
-  E('pulldown_cg', 'Nedtrekk, smalt/underhånd', 'cable', 'vpull', ['Rygg', 'Biceps']),
-  E('cable_row', 'Sittende roing (kabel)', 'cable', 'hpull', ['Rygg'], ['Biceps']),
-  E('pushdown', 'Triceps pushdown', 'cable', 'triceps', ['Triceps']),
-  E('face_pull', 'Face pull', 'cable', 'rear_delt', ['Skuldre'], ['Rygg']),
-  E('cable_curl', 'Kabelcurl (lav trinse)', 'cable', 'biceps', ['Biceps']),
-  E('db_bench', 'Benkpress med manualer', 'db', 'hpush', ['Bryst'], ['Triceps', 'Skuldre'], { needs: 'bench' }),
-  E('db_incline', 'Skrå benkpress med manualer', 'db', 'hpush', ['Bryst', 'Skuldre'], ['Triceps'], { needs: 'bench' }),
-  E('db_ohp', 'Skulderpress med manualer', 'db', 'vpush', ['Skuldre'], ['Triceps']),
-  E('db_row', 'Ettarms roing med manual', 'db', 'hpull', ['Rygg'], ['Biceps']),
-  E('db_rdl', 'Rumensk markløft med manualer', 'db', 'hinge', ['Hamstring', 'Sete']),
-  E('goblet', 'Goblet squat', 'db', 'squat', ['Forside lår', 'Sete']),
-  E('bulgarian', 'Bulgarsk splittknebøy', 'db', 'lunge', ['Forside lår', 'Sete'], [], { needs: 'bench' }),
-  E('db_lunge', 'Utfall med manualer', 'db', 'lunge', ['Forside lår', 'Sete']),
-  E('lat_raise', 'Sideløft', 'db', 'side_delt', ['Skuldre']),
-  E('rear_fly', 'Omvendt flyes (bakre skulder)', 'db', 'rear_delt', ['Skuldre'], ['Rygg']),
-  E('db_curl', 'Curl med manualer', 'db', 'biceps', ['Biceps']),
-  E('hammer', 'Hammercurl', 'db', 'biceps', ['Biceps']),
-  E('db_oh_tri', 'Triceps over hodet (manual)', 'db', 'triceps', ['Triceps']),
-  E('db_shrug', 'Skuldertrekk med manualer', 'db', 'shrug', ['Rygg']),
-  E('pullup', 'Pull-ups', 'bw', 'vpull', ['Rygg'], ['Biceps']),
-  E('chinup', 'Chin-ups', 'bw', 'vpull', ['Rygg', 'Biceps']),
-  E('pushup', 'Armhevinger', 'bw', 'hpush', ['Bryst'], ['Triceps', 'Skuldre']),
-  E('hlr', 'Hengende beinhev', 'bw', 'core', ['Mage']),
-  E('plank', 'Planke', 'bw', 'core', ['Mage'], [], { type: 'time' }),
-  E('treadmill', 'Tredemølle – løp/gå', 'treadmill', 'cardio', [], [], { type: 'cardio' }),
-  E('incline_walk', 'Tredemølle – gange i motbakke', 'treadmill', 'cardio', [], [], { type: 'cardio' }),
+  E('squat', 'Knebøy', 'barbell', 'squat', ['quads', 'glutes'], ['adductors', 'lower_back', 'abs'], { inc: 5,
+    how: ['Stanga på øvre del av ryggen (ikke på nakken), føttene i skulderbredde med tærne litt ut.', 'Pust inn i magen og stram hele midtpartiet før du går ned.', 'Sitt ned mellom hælene til hofta er minst i høyde med knærne.', 'Press opp gjennom hele foten med knærne i retning tærne.'],
+    err: 'Knærne faller innover. Hælene løfter seg. Overkroppen faller fram, og løftet blir en god morgen.' }),
+  E('ssb_squat', 'Knebøy (safety bar)', 'ssb', 'squat', ['quads', 'glutes'], ['adductors', 'upper_back', 'lower_back'], { inc: 5,
+    how: ['Legg puten på skuldrene og hold i håndtakene foran deg.', 'Stram magen og hold brystet oppe – stanga vil dra deg fram.', 'Sitt ned mellom hælene til god dybde.', 'Press opp og skyv øvre rygg bakover mot stanga.'],
+    err: 'Lar stanga trekke overkroppen fram. Slipper spenningen i øvre rygg i bunnen.' }),
+  E('front_squat', 'Frontbøy', 'barbell', 'squat', ['quads'], ['glutes', 'abs', 'upper_back'], {
+    how: ['Stanga hviler på fremre skulder, albuene høyt fram.', 'Stå i skulderbredde, stram magen.', 'Sitt rett ned med oppreist overkropp.', 'Press opp og hold albuene høye hele veien.'],
+    err: 'Albuene synker, og stanga ruller fram. Runder øvre rygg.' }),
+  E('deadlift', 'Markløft', 'barbell', 'hinge', ['hamstrings', 'glutes', 'lower_back'], ['lats', 'traps', 'quads', 'forearm'], { inc: 5,
+    how: ['Stå med midtfoten under stanga, grip rett utenfor knærne.', 'Senk hofta til leggene treffer stanga, rett rygg, brystet opp.', 'Stram lats («knekk stanga») og press gulvet bort.', 'Stå helt opp med hofta fram – ikke len deg bakover.'],
+    err: 'Runder korsryggen. Hofta skyter opp før stanga løfter. Stanga glir bort fra leggene.' }),
+  E('rdl', 'Rumensk markløft', 'barbell', 'hinge', ['hamstrings', 'glutes'], ['lower_back', 'forearm'], { inc: 5,
+    how: ['Start stående med stanga i hoftehøyde, svak bøy i knærne.', 'Skyv hofta bakover – stanga glir langs lårene.', 'Gå ned til du kjenner godt strekk bak i lårene (ofte rett under knærne).', 'Driv hofta fram og klem setet på toppen.'],
+    err: 'Runder ryggen. Bøyer knærne for mye, så det blir knebøy. Stanga slipper lårene.' }),
+  E('good_morning', 'Good morning (safety bar)', 'ssb', 'hinge', ['hamstrings', 'lower_back'], ['glutes'], {
+    how: ['Safety bar på skuldrene, føttene i hoftebredde, myk i knærne.', 'Skyv hofta bakover og len overkroppen fram med rett rygg.', 'Gå ned til overkroppen er nesten vannrett eller til strekket stopper deg.', 'Driv hofta fram tilbake til stående.'],
+    err: 'Runder ryggen. For tung vekt for tidlig – start lett.' }),
+  E('bench', 'Benkpress', 'barbell', 'hpush', ['chest'], ['front_delt', 'triceps'], { needs: 'bench',
+    how: ['Ligg med øynene under stanga, føttene godt plantet i gulvet.', 'Samle skulderbladene og løft brystet.', 'Senk stanga kontrollert til nedre del av brystet, albuene ca. 45° ut.', 'Press opp og litt bakover mot startposisjonen.'],
+    err: 'Albuene rett ut til siden. Spretter stanga på brystet. Rumpa løfter seg fra benken.' }),
+  E('incline_bench', 'Skrå benkpress', 'barbell', 'hpush', ['chest', 'front_delt'], ['triceps'], { needs: 'bench',
+    how: ['Still benken på 30–45°.', 'Samle skulderbladene, føttene i gulvet.', 'Senk stanga til øvre del av brystet.', 'Press rett opp over skuldrene.'],
+    err: 'For bratt benk gjør det til skulderpress. Svaier mye i ryggen.' }),
+  E('cg_bench', 'Benkpress, smalt grep', 'barbell', 'hpush', ['triceps', 'chest'], ['front_delt'], { needs: 'bench',
+    how: ['Grip ca. skulderbredde (ikke smalere).', 'Hold albuene inntil kroppen.', 'Senk til nedre bryst.', 'Press opp med fokus på å strekke armene.'],
+    err: 'For smalt grep gir vondt i håndleddene. Albuene flyter ut.' }),
+  E('ohp', 'Skulderpress stående', 'barbell', 'vpush', ['front_delt', 'side_delt'], ['triceps', 'traps', 'abs'], {
+    how: ['Stanga på fremre skulder, grip rett utenfor skuldrene.', 'Stram sete og mage – stå som en planke.', 'Press stanga rett opp og flytt hodet litt bakover forbi stanga.', 'Lås ut over hodet med stanga over midtfoten.'],
+    err: 'Svaier i korsryggen. Presser stanga i en bue ut foran kroppen.' }),
+  E('bb_row', 'Stangroing', 'barbell', 'hpull', ['lats', 'upper_back'], ['biceps', 'rear_delt', 'lower_back'], {
+    how: ['Len overkroppen fram ca. 45° med rett rygg, knærne myke.', 'La stanga henge med strake armer.', 'Trekk stanga mot navlen, albuene bakover.', 'Senk kontrollert.'],
+    err: 'Retter seg opp for hver rep. Rykker vekta opp med korsryggen.' }),
+  E('hip_thrust', 'Hip thrust', 'barbell', 'glute', ['glutes'], ['hamstrings'], { needs: 'bench', inc: 5,
+    how: ['Øvre rygg mot benken, stanga (med pute) over hofta.', 'Føttene i hoftebredde, leggene loddrett på toppen.', 'Press hofta opp til kroppen er rett fra knær til skuldre.', 'Klem setet ett sekund, senk kontrollert.'],
+    err: 'Svaier i korsryggen på toppen i stedet for å strekke hofta. Føttene for langt fram (kjennes i hamstring).' }),
+  E('ez_curl', 'Curl (EZ-stang)', 'ez', 'biceps', ['biceps'], ['forearm'], { inc: 1,
+    how: ['Stå oppreist, grip de skrå delene av stanga.', 'Hold albuene inntil siden.', 'Bøy armene og løft stanga mot skuldrene.', 'Senk helt ned, rolig.'],
+    err: 'Svinger med kroppen. Albuene glir fram.' }),
+  E('skull', 'Skullcrusher (EZ-stang)', 'ez', 'triceps', ['triceps'], [], { needs: 'bench', inc: 1,
+    how: ['Ligg på benken med stanga over brystet.', 'Bøy kun i albuene og senk stanga mot panna/bak hodet.', 'Hold overarmene stille.', 'Strekk armene tilbake opp.'],
+    err: 'Albuene spriker ut. Overarmene beveger seg, så det blir en press.' }),
+  E('smith_squat', 'Knebøy i smith', 'smith', 'squat', ['quads', 'glutes'], ['adductors'], { inc: 5,
+    how: ['Stanga på øvre rygg, føttene litt foran stanga.', 'Lås opp stanga ved å vri den.', 'Sitt ned til god dybde.', 'Press opp – husk å vri for å låse når du er ferdig.'],
+    err: 'Føttene rett under stanga gir mye trykk på knærne. Glemmer sikkerhetsstopperne.' }),
+  E('smith_bench', 'Benkpress i smith', 'smith', 'hpush', ['chest'], ['front_delt', 'triceps'], { needs: 'bench',
+    how: ['Plasser benken så stanga treffer nedre del av brystet.', 'Samle skulderbladene.', 'Senk kontrollert til brystet.', 'Press opp.'],
+    err: 'Benken står feil, så stanga treffer halsen eller magen. Still sikkerhetsstopperne.' }),
+  E('smith_incline', 'Skrå benkpress i smith', 'smith', 'hpush', ['chest', 'front_delt'], ['triceps'], { needs: 'bench',
+    how: ['Benken på 30–45°, stanga skal treffe øvre bryst.', 'Samle skulderbladene.', 'Senk kontrollert.', 'Press opp.'],
+    err: 'For bratt benk. Mister spenningen i skulderbladene.' }),
+  E('smith_ohp', 'Skulderpress i smith (sittende)', 'smith', 'vpush', ['front_delt', 'side_delt'], ['triceps'], { needs: 'bench',
+    how: ['Benken nesten loddrett, stanga rett foran ansiktet.', 'Senk til haka/øvre bryst.', 'Press rett opp.', 'Ikke lås albuene hardt ut.'],
+    err: 'Svaier mye i ryggen. Senker stanga bak nakken.' }),
+  E('smith_row', 'Roing i smith', 'smith', 'hpull', ['lats', 'upper_back'], ['biceps', 'rear_delt'], {
+    how: ['Stanga i knehøyde, len deg fram med rett rygg.', 'Trekk stanga mot navlen.', 'Klem skulderbladene sammen.', 'Senk kontrollert.'],
+    err: 'Runder ryggen. Rykker med hele kroppen.' }),
+  E('smith_split', 'Splittknebøy i smith', 'smith', 'lunge', ['quads', 'glutes'], ['adductors'], {
+    how: ['Stå med ett bein foran og ett bak, stanga på øvre rygg.', 'Senk rett ned til bakre kne nesten treffer gulvet.', 'Press opp med fremre bein.', 'Ta alle reps på ett bein, så bytt.'],
+    err: 'For kort steg gir knær langt foran tærne. Bakre bein gjør jobben.' }),
+  E('smith_hipthrust', 'Hip thrust i smith', 'smith', 'glute', ['glutes'], ['hamstrings'], { needs: 'bench', inc: 5,
+    how: ['Øvre rygg mot benken, stanga med pute over hofta.', 'Føttene i hoftebredde.', 'Press hofta opp til rett linje fra knær til skuldre.', 'Klem setet, senk rolig.'],
+    err: 'Svaier i korsryggen på toppen. For kort bevegelse.' }),
+  E('smith_calf', 'Tåhev i smith', 'smith', 'calf', ['calves'], [], { inc: 5,
+    how: ['Stå med fotballene på en skive eller kloss, stanga på skuldrene.', 'Senk hælene så langt ned du kan.', 'Press opp på tærne så høyt som mulig.', 'Hold ett sekund på toppen.'],
+    err: 'Spretter i bunnen. For kort bevegelse.' }),
+  E('tbar_row', 'T-bar roing (landmine)', 'landmine', 'hpull', ['lats', 'upper_back'], ['biceps', 'rear_delt', 'lower_back'], {
+    how: ['Stå over stanga med et V-håndtak rundt den.', 'Len deg fram med rett rygg, knærne myke.', 'Trekk skivene mot brystet/magen.', 'Senk kontrollert til strake armer.'],
+    err: 'Retter seg opp for å få vekta opp. Runder ryggen.' }),
+  E('landmine_press', 'Landmine press', 'landmine', 'vpush', ['front_delt', 'chest'], ['triceps'], {
+    how: ['Hold enden av stanga ved skulderen (én eller to hender).', 'Stå i utfallsstilling eller parallelt, stram magen.', 'Press stanga opp og fram til armen er strak.', 'Senk kontrollert til skulderen.'],
+    err: 'Svaier i ryggen. Presser for mye opp i stedet for fram.' }),
+  E('legpress', 'Benpress (sittende)', 'legpress', 'squat', ['quads', 'glutes'], ['adductors'], { inc: 5,
+    how: ['Sitt med ryggen godt inntil, føttene i hoftebredde midt på plata.', 'Løs ut sikringen.', 'Senk sleden kontrollert til ca. 90° i kneet.', 'Press opp uten å låse knærne helt.'],
+    err: 'Korsryggen løfter seg fra setet i bunnen. Låser knærne hardt. For kort bevegelse.' }),
+  E('hack', 'Hacklift (hack squat)', 'legpress', 'squat', ['quads', 'glutes'], ['adductors'], { inc: 5,
+    how: ['Rygg og skuldre inntil putene, føttene midt på plata.', 'Løs ut sikringen.', 'Senk deg kontrollert så dypt du klarer med rett rygg.', 'Press opp gjennom hele foten.'],
+    err: 'Hælene løfter seg. Knærne faller innover. For tung vekt og for lite dybde.' }),
+  E('lp_calf', 'Tåhev i benpress', 'legpress', 'calf', ['calves'], [], { inc: 5,
+    how: ['Fotballene på nedre kant av plata, beina nesten strake.', 'Senk tærne mot deg så langt du kan.', 'Press plata bort ved å strekke anklene.', 'Hold kort på toppen.'],
+    err: 'Bøyer knærne og bruker lårene. Ikke løs ut sikringen med tærne alene.' }),
+  E('leg_ext', 'Leg extension', 'legext', 'quad_iso', ['quads'], [], {
+    how: ['Juster ryggen så kneleddet er på linje med maskinens akse.', 'Puten hviler like over anklene.', 'Strekk beina helt ut og hold et halvt sekund.', 'Senk kontrollert på 2–3 sekunder.'],
+    err: 'Kaster vekta opp med fart. Løfter setet fra benken. For kort bevegelse.' }),
+  E('leg_curl', 'Leg curl', 'legext', 'ham_iso', ['hamstrings'], ['calves'], {
+    how: ['Juster så kneleddet er på linje med aksen, puten over hælene.', 'Bøy beina så langt du klarer.', 'Klem i toppen.', 'Senk rolig til nesten strake bein.'],
+    err: 'Hofta løfter seg fra benken. Rykker vekta opp.' }),
+  E('rev_hyper', 'Reverse hyper', 'hyper', 'backext', ['glutes', 'hamstrings', 'lower_back'], [], {
+    how: ['Ligg på magen med hofta på kanten, hold godt i håndtakene.', 'La beina henge med stroppen rundt anklene.', 'Sving beina bakover og opp til kroppen er rett.', 'La beina falle kontrollert tilbake og under deg.'],
+    err: 'Overstrekker korsryggen på toppen. For mye fart og sving.' }),
+  E('back_ext', 'Rygghev', 'backext', 'backext', ['lower_back', 'glutes', 'hamstrings'], [], {
+    how: ['Hofta like over kanten av puten, anklene låst.', 'Kryss armene over brystet (eller hold en skive).', 'Senk overkroppen kontrollert.', 'Løft opp til rett linje – ikke lenger.'],
+    err: 'Overstrekker ryggen på toppen. Kaster seg opp med fart.' }),
+  E('pulldown', 'Nedtrekk, bredt grep', 'cable', 'vpull', ['lats'], ['biceps', 'upper_back', 'rear_delt'], {
+    how: ['Grip litt bredere enn skuldrene, lårene under puten.', 'Brystet fram, len deg lett bakover.', 'Trekk albuene ned mot hoftene til stanga når øvre bryst.', 'Slipp opp kontrollert til strake armer.'],
+    err: 'Trekker med armene i stedet for ryggen. Kaster overkroppen bakover. Trekker bak nakken.' }),
+  E('pulldown_cg', 'Nedtrekk, smalt/underhånd', 'cable', 'vpull', ['lats', 'biceps'], ['upper_back'], {
+    how: ['Grip i skulderbredde med håndflatene mot deg (eller V-håndtak).', 'Brystet fram, len deg lett bakover.', 'Trekk mot øvre bryst med albuene inntil kroppen.', 'Slipp opp kontrollert.'],
+    err: 'Rykker med kroppen. Stopper før armene er strake.' }),
+  E('cable_row', 'Sittende roing (kabel)', 'cable', 'hpull', ['lats', 'upper_back'], ['biceps', 'rear_delt'], {
+    how: ['Sitt med føttene mot noe stødig, knærne myke, rett rygg.', 'Trekk håndtaket mot magen.', 'Klem skulderbladene sammen bak.', 'Strekk armene fram igjen uten å runde ryggen.'],
+    err: 'Lener seg langt fram og bak for hver rep. Trekker skuldrene opp mot ørene.' }),
+  E('pushdown', 'Triceps pushdown', 'cable', 'triceps', ['triceps'], [], {
+    how: ['Stå foran øvre trinse, grip stang eller tau.', 'Albuene inntil siden.', 'Press ned til armene er strake.', 'La den gå opp til ca. 90° i albuen.'],
+    err: 'Albuene flyter fram og bak. Lener seg over med kroppsvekta.' }),
+  E('face_pull', 'Face pull', 'cable', 'rear_delt', ['rear_delt', 'upper_back'], ['traps'], {
+    how: ['Tau på øvre trinse i ansiktshøyde.', 'Trekk tauet mot ansiktet og del det ut til sidene.', 'Albuene høyt, tommelen peker bakover på slutten.', 'Slipp kontrollert tilbake.'],
+    err: 'For tung vekt, så det blir roing. Albuene synker.' }),
+  E('cable_curl', 'Kabelcurl (lav trinse)', 'cable', 'biceps', ['biceps'], ['forearm'], {
+    how: ['Stå foran nedre trinse med stang eller tau.', 'Albuene inntil siden.', 'Bøy armene opp mot skuldrene.', 'Senk helt ned, rolig.'],
+    err: 'Svinger med kroppen. Albuene glir fram.' }),
+  E('db_bench', 'Benkpress med manualer', 'db', 'hpush', ['chest'], ['front_delt', 'triceps'], { needs: 'bench',
+    how: ['Sitt med manualene på lårene, len deg bakover og få dem opp.', 'Samle skulderbladene, føttene i gulvet.', 'Senk manualene til de er i høyde med brystet.', 'Press opp og litt inn mot hverandre.'],
+    err: 'Albuene rett ut til siden. Slipper manualene ned for fort.' }),
+  E('db_incline', 'Skrå benkpress med manualer', 'db', 'hpush', ['chest', 'front_delt'], ['triceps'], { needs: 'bench',
+    how: ['Benken på 30–45°.', 'Samle skulderbladene.', 'Senk manualene til øvre bryst.', 'Press opp over skuldrene.'],
+    err: 'For bratt benk. Mister kontroll i bunnen.' }),
+  E('db_ohp', 'Skulderpress med manualer', 'db', 'vpush', ['front_delt', 'side_delt'], ['triceps'], {
+    how: ['Sitt eller stå med manualene ved skuldrene.', 'Stram magen.', 'Press rett opp til armene er nesten strake.', 'Senk til skulderhøyde.'],
+    err: 'Svaier i ryggen. Senker for kort.' }),
+  E('db_row', 'Ettarms roing med manual', 'db', 'hpull', ['lats', 'upper_back'], ['biceps', 'rear_delt'], {
+    how: ['Én hånd og ett kne på benken (eller hånd mot racket), rett rygg.', 'La manualen henge rett ned.', 'Trekk albuen opp og bakover mot hofta.', 'Senk helt ned med strekk.'],
+    err: 'Vrir overkroppen for å få vekta opp. Trekker mot brystet i stedet for hofta.' }),
+  E('db_rdl', 'Rumensk markløft med manualer', 'db', 'hinge', ['hamstrings', 'glutes'], ['lower_back'], {
+    how: ['Stå med manualene foran lårene, svak bøy i knærne.', 'Skyv hofta bakover, manualene tett langs lårene.', 'Gå ned til godt strekk bak i lårene.', 'Driv hofta fram og klem setet.'],
+    err: 'Runder ryggen. Manualene henger langt fra kroppen.' }),
+  E('goblet', 'Goblet squat', 'db', 'squat', ['quads', 'glutes'], ['adductors', 'abs'], {
+    how: ['Hold én manual loddrett inntil brystet.', 'Føttene litt bredere enn hoftene.', 'Sitt rett ned mellom hælene, albuene innenfor knærne.', 'Press opp gjennom hele foten.'],
+    err: 'Hælene løfter seg. Knærne faller innover. Manualen glir fra kroppen.' }),
+  E('bulgarian', 'Bulgarsk splittknebøy', 'db', 'lunge', ['quads', 'glutes'], ['adductors'], { needs: 'bench',
+    how: ['Bakre fot på benken, fremre fot godt foran.', 'Manualer i hendene, overkroppen oppreist.', 'Senk rett ned til fremre lår er vannrett.', 'Press opp med fremre bein. Alle reps på ett bein, så bytt.'],
+    err: 'For kort avstand til benken. Mister balansen – start uten vekt.' }),
+  E('db_lunge', 'Utfall med manualer', 'db', 'lunge', ['quads', 'glutes'], ['adductors'], {
+    how: ['Stå med manualer i hendene.', 'Ta et langt steg fram.', 'Senk til bakre kne nesten treffer gulvet.', 'Press tilbake til start, bytt bein.'],
+    err: 'For kort steg. Fremre kne faller innover.' }),
+  E('lat_raise', 'Sideløft', 'db', 'side_delt', ['side_delt'], ['traps'], {
+    how: ['Stå med manualene langs siden, svak bøy i albuene.', 'Løft ut til siden til skulderhøyde.', 'Led med albuene, ikke hendene.', 'Senk rolig.'],
+    err: 'For tung vekt og sving i kroppen. Trekker skuldrene opp mot ørene.' }),
+  E('rear_fly', 'Omvendt flyes (bakre skulder)', 'db', 'rear_delt', ['rear_delt'], ['upper_back'], {
+    how: ['Len deg fram med rett rygg, manualene henger under brystet.', 'Svak bøy i albuene.', 'Løft armene ut til siden i en bue.', 'Senk kontrollert.'],
+    err: 'Klemmer skulderbladene for mye, så øvre rygg tar over. For tung vekt.' }),
+  E('db_curl', 'Curl med manualer', 'db', 'biceps', ['biceps'], ['forearm'], {
+    how: ['Stå med manualene langs siden, håndflatene fram.', 'Albuene inntil kroppen.', 'Bøy opp mot skuldrene.', 'Senk helt ned.'],
+    err: 'Svinger med kroppen. Albuene glir fram.' }),
+  E('hammer', 'Hammercurl', 'db', 'biceps', ['biceps', 'forearm'], [], {
+    how: ['Hold manualene med tommelen opp.', 'Albuene inntil siden.', 'Bøy opp mot skuldrene.', 'Senk rolig.'],
+    err: 'Svinger med kroppen. Halv bevegelse.' }),
+  E('db_oh_tri', 'Triceps over hodet (manual)', 'db', 'triceps', ['triceps'], [], {
+    how: ['Hold én manual med begge hender over hodet.', 'Senk den bak hodet ved å bøye albuene.', 'Hold albuene pekende fram/opp.', 'Strekk armene opp igjen.'],
+    err: 'Albuene spriker ut. Svaier i korsryggen.' }),
+  E('db_shrug', 'Skuldertrekk med manualer', 'db', 'shrug', ['traps'], ['forearm'], {
+    how: ['Stå med manualene langs siden.', 'Løft skuldrene rett opp mot ørene.', 'Hold et sekund.', 'Senk helt ned.'],
+    err: 'Ruller skuldrene. Bøyer armene.' }),
+  E('pullup', 'Pull-ups', 'bw', 'vpull', ['lats'], ['biceps', 'upper_back'], {
+    how: ['Heng i stanga med overhåndsgrep litt bredere enn skuldrene.', 'Trekk skulderbladene ned først.', 'Trekk deg opp til haka er over stanga.', 'Senk deg helt ned.'],
+    err: 'Halve repetisjoner. Sparker med beina.' }),
+  E('chinup', 'Chin-ups', 'bw', 'vpull', ['lats', 'biceps'], ['upper_back'], {
+    how: ['Heng med underhåndsgrep i skulderbredde.', 'Trekk skulderbladene ned.', 'Trekk deg opp til haka er over stanga.', 'Senk deg helt ned.'],
+    err: 'Halve repetisjoner. Svinger med kroppen.' }),
+  E('pushup', 'Armhevinger', 'bw', 'hpush', ['chest'], ['triceps', 'front_delt', 'abs'], {
+    how: ['Hendene litt bredere enn skuldrene, kroppen rett.', 'Senk brystet mot gulvet, albuene ca. 45° ut.', 'Press opp til strake armer.', 'For lettere: hendene på en benk eller knærne i gulvet.'],
+    err: 'Hofta henger. Albuene rett ut til siden.' }),
+  E('hlr', 'Hengende beinhev', 'bw', 'core', ['abs'], ['obliques', 'forearm'], {
+    how: ['Heng i pull-up-stanga.', 'Løft knærne (lettere) eller strake bein mot brystet.', 'Rull bekkenet opp på toppen.', 'Senk kontrollert uten å svinge.'],
+    err: 'Svinger fram og tilbake. Løfter bare med hoftebøyerne uten å runde bekkenet.' }),
+  E('plank', 'Planke', 'bw', 'core', ['abs'], ['obliques'], { type: 'time',
+    how: ['Underarmene i gulvet under skuldrene.', 'Kroppen rett fra hode til hæl.', 'Stram mage og sete.', 'Pust rolig.'],
+    err: 'Hofta henger eller stikker opp. Holder pusten.' }),
+  E('treadmill', 'Tredemølle – løp/gå', 'treadmill', 'cardio', [], ['quads', 'hamstrings', 'glutes', 'calves'], { type: 'cardio',
+    how: ['Start rolig og øk farten gradvis.', 'Løp avslappet med korte steg under kroppen.', 'Hold blikket fram, ikke på displayet.', 'Bruk pulssonen eller prat-testen til å styre farten.'],
+    err: 'Holder i håndtakene. Starter for hardt.' }),
+  E('incline_walk', 'Tredemølle – gange i motbakke', 'treadmill', 'cardio', [], ['glutes', 'hamstrings', 'calves', 'quads'], { type: 'cardio',
+    how: ['Still stigningen på 5–12 %.', 'Gå med rolig, jevnt tempo.', 'Slipp håndtakene – la beina jobbe.', 'Juster stigning eller fart for å holde riktig puls.'],
+    err: 'Holder i håndtakene og lener seg bakover, da blir det mye lettere.' }),
 ];
+
+/* ---------- Muskelkart ---------- */
+// Venstre halvdel av figuren (x < 100), speiles om x = 100. [muskel-id eller null, path]
+const BODY_SIL = 'M100,46 C94,46 90,50 90,56 C80,56 70,58 62,61 C50,64 44,74 43,88 L38,140 C34,170 30,190 27,206 L35,211 C43,190 49,170 53,148 L59,116 L65,134 C67,152 67,170 65,188 C61,222 59,262 63,298 C65,332 65,362 67,386 L66,404 L85,405 L85,388 C87,360 89,330 89,300 C91,270 95,240 99,212 L100,212 Z';
+const BODY_FRONT = [
+  [null, 'M93,44 L93,56 C91,58 88,60 84,61 L92,62 C95,60 97,58 97,54 Z'],
+  ['traps', 'M90,52 C86,56 80,59 74,61 L84,62 C88,60 90,57 90,52 Z'],
+  ['front_delt', 'M77,62 C70,61 65,62 61,63 C57,76 55,90 55,104 C61,92 68,80 78,71 Z'],
+  ['side_delt', 'M60,63 C51,66 46,74 45,85 C45,95 49,103 54,107 C54,94 56,79 60,63 Z'],
+  ['chest', 'M98,64 L81,64 C75,67 71,72 69,79 C78,80 89,80 98,80 Z'],
+  ['chest', 'M98,82 C89,82 78,82 68,82 C66,89 67,95 69,99 C77,107 90,108 98,103 Z'],
+  ['biceps', 'M54,110 C48,119 46,131 48,144 C53,147 58,143 60,137 C62,126 61,116 59,108 Z'],
+  ['forearm', 'M47,148 C42,163 38,180 35,197 L39,199 C45,184 50,167 54,150 Z'],
+  ['forearm', 'M55,148 C52,166 47,184 41,200 L44,201 C50,186 56,168 59,147 Z'],
+  ['abs', 'M98,108 L90,108 C89,112 89,118 90,122 L98,122 Z'],
+  ['abs', 'M98,124 L90,124 L90,138 L98,138 Z'],
+  ['abs', 'M98,140 L90,140 L90,154 L98,154 Z'],
+  ['abs', 'M98,156 L90,156 C90,166 92,176 96,184 L98,185 Z'],
+  ['obliques', 'M87,108 C79,112 73,122 72,134 C73,152 79,167 88,178 C87,154 86,130 87,108 Z'],
+  ['obliques', 'M67,101 C70,106 72,112 72,118 L69,118 C68,112 67,106 67,101 Z'],
+  ['adductors', 'M97,198 C94,212 92,230 91,248 C89,240 87,224 87,210 C89,204 93,200 97,198 Z'],
+  ['quads', 'M72,190 C64,212 62,240 65,266 C67,280 71,288 75,292 C73,268 73,240 76,214 Z'],
+  ['quads', 'M80,190 C76,214 75,240 77,266 C79,278 82,286 84,290 C87,268 88,240 87,214 C86,204 84,196 80,190 Z'],
+  ['quads', 'M88,246 C88,262 86,278 84,292 C89,292 93,286 93,276 C93,264 91,254 88,246 Z'],
+  ['calves', 'M70,310 C67,328 67,350 70,372 L74,373 C74,352 75,330 76,310 Z'],
+  ['calves', 'M80,310 C83,326 84,344 82,362 L78,366 C78,346 78,328 80,310 Z'],
+];
+const BODY_BACK = [
+  ['traps', 'M99,46 C96,52 90,57 80,61 L73,63 C82,64 92,66 99,68 Z'],
+  ['traps', 'M99,70 C92,71 85,73 79,75 C86,84 93,96 99,112 Z'],
+  ['rear_delt', 'M72,62 C61,62 51,70 48,82 C48,92 51,98 55,101 C59,88 65,76 73,68 Z'],
+  ['upper_back', 'M77,77 C72,83 70,90 71,100 C78,101 85,100 91,98 C88,89 83,82 77,77 Z'],
+  ['lats', 'M71,104 C69,120 71,140 77,158 C84,166 92,169 98,171 L98,118 C92,110 84,105 71,104 Z'],
+  ['triceps', 'M54,104 C48,116 46,128 47,141 C49,145 52,145 54,142 C54,128 55,116 58,104 Z'],
+  ['triceps', 'M59,106 C62,118 62,130 60,139 C58,142 56,143 55,142 C55,128 57,116 59,106 Z'],
+  ['forearm', 'M47,148 C42,163 38,180 35,197 L39,199 C45,184 50,167 54,150 Z'],
+  ['forearm', 'M55,148 C52,166 47,184 41,200 L44,201 C50,186 56,168 59,147 Z'],
+  ['lower_back', 'M98,120 L93,120 C91,142 89,162 85,184 L98,187 Z'],
+  ['glutes', 'M84,178 C75,180 69,186 67,194 C73,192 80,191 86,191 Z'],
+  ['glutes', 'M99,191 L86,192 C72,196 66,210 68,226 C74,236 87,239 99,235 Z'],
+  ['hamstrings', 'M70,236 C66,256 66,276 70,294 L77,296 C76,276 77,256 79,240 Z'],
+  ['hamstrings', 'M81,240 C80,258 80,278 80,296 C85,297 88,293 89,288 C90,272 92,256 93,242 C89,243 85,242 81,240 Z'],
+  ['calves', 'M68,306 C62,322 62,340 67,356 C70,360 74,360 76,356 C76,338 76,322 75,306 Z'],
+  ['calves', 'M77,306 C78,322 79,340 78,358 C82,362 86,358 87,350 C88,334 86,318 82,306 Z'],
+];
+function bodyHalf(shapes, ox, cls) {
+  let g = `<path class="sil" d="${BODY_SIL}" transform="translate(${ox},0)"/><path class="sil" d="${BODY_SIL}" transform="translate(${ox + 200},0) scale(-1,1)"/>
+    <ellipse class="sil" cx="${ox + 100}" cy="26" rx="15" ry="19"/><ellipse class="sil" cx="${ox + 31}" cy="212" rx="6" ry="9"/><ellipse class="sil" cx="${ox + 169}" cy="212" rx="6" ry="9"/>`;
+  for (const [m, d] of shapes) { const c = cls(m); g += `<path class="${c}" d="${d}" transform="translate(${ox},0)"/><path class="${c}" d="${d}" transform="translate(${ox + 200},0) scale(-1,1)"/>`; }
+  return g;
+}
+// Muskelkart forfra og bakfra. p = hovedmuskler, s = hjelpemuskler
+function bodySvg(p, s, opts = {}) {
+  const cls = m => 'mm' + (m && p.includes(m) ? ' p' : m && s.includes(m) ? ' s' : '');
+  return `<svg class="body" viewBox="0 0 415 ${opts.labels ? 428 : 410}" role="img" aria-label="Muskler som trenes: ${esc(musNames(p.concat(s)))}">
+    ${bodyHalf(BODY_FRONT, 0, cls)}${bodyHalf(BODY_BACK, 215, cls)}
+    ${opts.labels ? '<text x="100" y="424" text-anchor="middle">Forfra</text><text x="315" y="424" text-anchor="middle">Bakfra</text>' : ''}</svg>`;
+}
 
 /* ---------- Pulssoner (Olympiatoppens intensitetsskala, % av makspuls) ---------- */
 const ZONES = { 1: [55, 72, 'Veldig rolig – du kan synge'], 2: [72, 82, 'Rolig – du kan prate i hele setninger'], 3: [82, 87, 'Moderat – bare korte setninger'], 4: [87, 92, 'Hardt – bare enkeltord'], 5: [92, 100, 'Svært hardt'] };
@@ -311,6 +504,7 @@ function load() {
   }
   // Fyll inn nye standardfelt hvis appen er oppdatert
   for (const k in DEFAULT_IMPL) if (!db.settings.impl[k]) db.settings.impl[k] = clone(DEFAULT_IMPL[k]);
+  for (const e of db.settings.customEx || []) { e.prim = (e.prim || []).map(m => OLD_MUS[m] || m); e.sec = (e.sec || []).map(m => OLD_MUS[m] || m); }
   for (const p of Object.values(db.profiles)) {
     if (!p.activeIds) { p.activeIds = p.activeProgramId ? [p.activeProgramId] : []; delete p.activeProgramId; }
     p.activeIds = p.activeIds.filter(id => p.programs.some(x => x.id === id));
@@ -561,7 +755,7 @@ function render() {
   document.documentElement.dataset.theme = db.settings.theme === 'auto' ? (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') : db.settings.theme;
   const top = state.stack[state.stack.length - 1];
   let html;
-  if (top) html = ({ program: viewProgramEdit, exercise: viewExercise, workout: viewWorkoutDetail, plates: viewPlates, equipment: viewEquipment, customEx: viewCustomEx })[top.type](top);
+  if (top) html = ({ program: viewProgramEdit, exercise: viewExercise, workout: viewWorkoutDetail, plates: viewPlates, equipment: viewEquipment, customEx: viewCustomEx, library: viewLibrary })[top.type](top);
   else html = ({ train: prof().active ? viewActive : viewTrain, programs: viewPrograms, progress: viewProgress, more: viewMore })[state.tab]();
   const tabs = [['train', '🏋️', 'Trening'], ['programs', '📋', 'Program'], ['progress', '📈', 'Fremgang'], ['more', '⚙️', 'Mer']];
   $('#app').innerHTML = html + `<nav class="tabs"><div class="in">${tabs.map(([k, ic, l]) => `<button class="${state.tab === k ? 'on' : ''}" data-act="tab" data-t="${k}"><span class="ic">${ic}</span>${l}${k === 'train' && prof().active ? ' •' : ''}</button>`).join('')}</div></nav>`;
@@ -669,7 +863,7 @@ function exCard(e, ei) {
   const ivOn = a.iv && a.iv.ei === ei;
   return `<div class="card ${lab ? 'ss' : ''}" id="ex-${ei}">
     ${lab ? `<div class="sslabel">Supersett ${esc(x.ss)} · ${lab.slice(1)} av ${grp.length}</div>` : ''}
-    <div class="row"><div class="grow"><h3 style="margin:0">${esc(ex.name)}</h3><div class="muted small">${lab && lab.slice(1) != grp.length ? esc(tgt.replace(/ · hvile .*$/, '')) + ' · ' + esc(impl.name) + ' · rett videre til neste' : esc(tgt) + (ex.type !== 'cardio' ? ' · ' + esc(impl.name) : '')}</div></div>
+    <div class="row"><div class="grow"><button data-act="openExercise" data-ex="${e.exId}" style="text-align:left;padding:0"><h3 style="margin:0">${esc(ex.name)} <span class="muted" style="font-weight:400">ⓘ</span></h3></button><div class="muted small">${lab && lab.slice(1) != grp.length ? esc(tgt.replace(/ · hvile .*$/, '')) + ' · ' + esc(impl.name) + ' · rett videre til neste' : esc(tgt) + (ex.type !== 'cardio' ? ' · ' + esc(impl.name) : '')}</div></div>
     <button class="iconbtn" data-act="exMenu" data-ei="${ei}">⋯</button></div>
     ${x.note ? `<div class="cue">${esc(x.note)}</div>` : ''}
     ${e.note ? `<div class="note ${e.tone}">${esc(e.note)}</div>` : ''}
@@ -709,14 +903,14 @@ function openPicker(mode, ctx) {
   let cur = null;
   if (mode === 'swap') cur = EX(prof().active.exercises[ctx.ei].exId);
   if (mode === 'progSwap') { const pr = prof().programs.find(x => x.id === ctx.pid); cur = EX(pr.days[ctx.d].ex[ctx.i].exId); }
-  const item = ex => `<button class="li pick" data-act="pickEx" data-id="${ex.id}" data-n="${esc((ex.name + ' ' + implOf(ex).name + ' ' + ex.prim.join(' ')).toLowerCase())}"><div class="grow"><div>${esc(ex.name)}</div><div class="muted small">${esc(implOf(ex).name)}${ex.prim.length ? ' · ' + esc(ex.prim.join(', ')) : ''}</div></div></button>`;
+  const item = ex => `<button class="li pick" data-act="pickEx" data-id="${ex.id}" data-n="${esc((ex.name + ' ' + implOf(ex).name + ' ' + musNames(ex.prim)).toLowerCase())}"><div class="grow"><div>${esc(ex.name)}</div><div class="muted small">${esc(implOf(ex).name)}${ex.prim.length ? ' · ' + esc(musNames(ex.prim)) : ''}</div></div></button>`;
   let html = `<h3>${cur ? 'Bytt ut ' + esc(cur.name) : 'Velg øvelse'}</h3><input type="search" data-filter="1" placeholder="Søk …" style="margin:8px 0">`;
   if (cur) {
     // Ved bytte: bare øvelser med samme bevegelse, eller med samme viktigste muskel (første i prim)
-    const sameMus = x => !!cur.prim[0] && x.prim[0] === cur.prim[0];
+    const sameMus = x => !!cur.prim[0] && MUS_GROUP[x.prim[0]] === MUS_GROUP[cur.prim[0]];
     const same = list.filter(x => x.id !== cur.id && x.pat === cur.pat);
     const other = list.filter(x => x.id !== cur.id && x.pat !== cur.pat && sameMus(x));
-    const main = (cur.prim[0] || PATTERNS[cur.pat] || 'det samme').toLowerCase();
+    const main = (MUS[cur.prim[0]] || PATTERNS[cur.pat] || 'det samme').toLowerCase();
     html += `<div class="muted small" style="margin-bottom:4px">Viser øvelser som trener ${esc(main)}.</div>`;
     if (same.length) html += `<div class="muted small pickhead" style="margin-top:8px">Samme bevegelse (${esc(PATTERNS[cur.pat] || '')})</div><div class="list">${same.map(item).join('')}</div>`;
     if (other.length) html += `<div class="muted small pickhead" style="margin-top:14px">Andre øvelser for ${esc(main)}</div><div class="list">${other.map(item).join('')}</div>`;
@@ -807,7 +1001,7 @@ function viewProgress() {
     <div class="row" style="gap:8px"><div class="stat"><span class="muted small">Økter i uka</span><b>${thisWeek.length}</b></div><div class="stat"><span class="muted small">Sett</span><b>${sets}</b></div><div class="stat"><span class="muted small">Kondisjon</span><b>${fmt(cardioMin)} min</b></div></div>
     <div class="card" style="margin-top:12px"><h3>Økter per uke</h3><div class="row" style="align-items:flex-end;gap:6px;height:70px">${weeks.map((n, i) => `<div class="grow" style="text-align:center"><div style="height:${Math.max(4, n * 14)}px;background:${i === 7 ? 'var(--acc)' : 'var(--card2)'};border-radius:5px"></div><div class="tiny muted">${n}</div></div>`).join('')}</div><div class="muted tiny">Siste 8 uker</div></div>
     <div class="card"><h3>Sett per muskel denne uka</h3><div class="muted small" style="margin-bottom:6px">Sekundære muskler teller som et halvt sett. 10–20 sett per uke er et vanlig mål for vekst.</div>
-      ${MUSCLES.map(m => `<div class="mbar"><span>${m}</span><span class="tr"><i style="width:${100 * mus[m] / maxM}%"></i></span><span class="small" style="text-align:right">${fmt(mus[m])}</span></div>`).join('')}</div>
+      ${MUSCLES.map(m => `<div class="mbar"><span>${MUS[m]}</span><span class="tr"><i style="width:${100 * mus[m] / maxM}%"></i></span><span class="small" style="text-align:right">${fmt(mus[m])}</span></div>`).join('')}</div>
     <h2>Øvelser</h2>${exRows.length ? `<div class="card list" style="padding:4px 14px">${exRows.map(r => `<button class="li" data-act="openExercise" data-ex="${r.ex.id}"><div class="grow"><div>${esc(r.ex.name)}</div><div class="muted small">${r.n} økter · sist ${fmtDate(r.last)}</div></div>${r.best ? `<div class="small" style="text-align:right"><b>${fmt(Math.round(r.best * 2) / 2)}</b><div class="muted tiny">est. 1RM</div></div>` : ''}<span class="muted">›</span></button>`).join('')}</div>` : '<div class="empty">Fullfør en økt for å se fremgang.</div>'}
     <h2>Kroppsvekt</h2><div class="card"><div class="row"><input id="bwIn" inputmode="decimal" placeholder="kg" class="grow"><button class="btn acc" data-act="addBw">Lagre</button></div>
       <div style="margin-top:10px">${bw.length ? lineChart(bw.slice(-30).map(b => ({ x: b.date, y: b.kg })), 'kg') + `<div class="muted small">Sist: ${fmt(bw[bw.length - 1].kg)} kg (${fmtDate(bw[bw.length - 1].date)})</div>` : '<div class="muted small">Ingen registreringer ennå.</div>'}</div></div>
@@ -818,10 +1012,30 @@ function viewExercise({ exId }) {
   const best = h.reduce((a, x) => { const b = bestOf(x.sets, ex); return { e: Math.max(a.e, b.e), w: Math.max(a.w, b.w), r: Math.max(a.r, b.r) }; }, { e: 0, w: 0, r: 0 });
   const isReps = ex.type === 'reps';
   const pts = h.slice(-40).map(x => ({ x: x.date, y: isReps ? Math.round(bestOf(x.sets, ex).e * 10) / 10 : ex.type === 'time' ? bestOf(x.sets, ex).r : x.sets.reduce((a, s) => a + (num(s.w) || 0), 0) }));
-  return `${backBtn()}<h1>${esc(ex.name)}</h1><div class="muted small" style="margin:-8px 0 12px">${esc(implOf(ex).name)}${ex.prim.length ? ' · ' + esc(ex.prim.join(', ')) : ''}</div>
-    ${isReps ? `<div class="row" style="gap:8px"><div class="stat"><span class="muted small">Est. 1RM</span><b>${fmt(Math.round(best.e * 2) / 2)}</b></div><div class="stat"><span class="muted small">Tyngste</span><b>${fmt(best.w)}</b></div><div class="stat"><span class="muted small">Flest reps</span><b>${fmt(best.r)}</b></div></div>` : ''}
-    <div class="card" style="margin-top:12px"><h3>${isReps ? 'Estimert 1RM per økt' : ex.type === 'time' ? 'Lengste hold' : 'Minutter per økt'}</h3>${lineChart(pts, isReps ? 'kg (Brzycki/Epley)' : ex.type === 'time' ? 'sekunder' : 'minutter')}</div>
-    <h2>Økter</h2><div class="card list" style="padding:4px 14px">${[...h].reverse().map(x => `<div class="li"><div class="grow"><div>${setsSummary(x.sets, ex)}</div><div class="muted small">${fmtDate(x.date)}</div></div>${isReps ? `<div class="small muted">${fmt(Math.round(bestOf(x.sets, ex).e))}</div>` : ''}</div>`).join('')}</div>`;
+  const info = `<div class="card">${bodySvg(ex.prim, ex.sec, { labels: true })}
+      <div style="margin-top:10px">${ex.prim.map(m => `<span class="mchip p">${MUS[m]}</span>`).join('')}${ex.sec.map(m => `<span class="mchip s">${MUS[m]}</span>`).join('')}</div>
+      <div class="muted tiny">${ex.prim.length ? 'Mørk farge = hovedmuskel, lys = hjelpemuskel.' : 'Lys farge = muskler som jobber.'}</div>
+      ${ex.how ? `<h3 style="margin-top:14px">Slik gjør du</h3><ol class="how">${ex.how.map(s => `<li>${esc(s)}</li>`).join('')}</ol>` : ''}
+      ${ex.err ? `<h3>Vanlige feil</h3><div class="muted">${esc(ex.err)}</div>` : ''}
+      <div class="muted small" style="margin-top:12px">Utstyr: ${esc(implOf(ex).name)} · ${esc(PATTERNS[ex.pat] || '')}${ex.needs === 'bench' ? ' · trenger benk' : ''}</div></div>`;
+  return `${backBtn()}<h1>${esc(ex.name)}</h1>${info}
+    ${h.length ? `<h2>Din historikk</h2>` : '<div class="muted small" style="margin:8px 0 0">Ingen logget historikk på denne øvelsen ennå.</div>'}
+    ${!h.length ? '' : isReps ? `<div class="row" style="gap:8px"><div class="stat"><span class="muted small">Est. 1RM</span><b>${fmt(Math.round(best.e * 2) / 2)}</b></div><div class="stat"><span class="muted small">Tyngste</span><b>${fmt(best.w)}</b></div><div class="stat"><span class="muted small">Flest reps</span><b>${fmt(best.r)}</b></div></div>` : ''}
+    ${!h.length ? '' : `<div class="card" style="margin-top:12px"><h3>${isReps ? 'Estimert 1RM per økt' : ex.type === 'time' ? 'Lengste hold' : 'Minutter per økt'}</h3>${lineChart(pts, isReps ? 'kg (Brzycki/Epley)' : ex.type === 'time' ? 'sekunder' : 'minutter')}</div>
+    <h2>Økter</h2><div class="card list" style="padding:4px 14px">${[...h].reverse().map(x => `<div class="li"><div class="grow"><div>${setsSummary(x.sets, ex)}</div><div class="muted small">${fmtDate(x.date)}</div></div>${isReps ? `<div class="small muted">${fmt(Math.round(bestOf(x.sets, ex).e))}</div>` : ''}</div>`).join('')}</div>`}`;
+}
+function viewLibrary() {
+  const q = (state.libQ || '').toLowerCase(), mf = state.libM || '';
+  const key = ex => (ex.name + ' ' + implOf(ex).name + ' ' + musNames(ex.prim.concat(ex.sec))).toLowerCase();
+  const list = allEx().filter(available).filter(ex => !mf || ex.prim.some(m => MUS_GROUP[m] === mf))
+    .sort((a, b) => a.name.localeCompare(b.name, 'nb'));
+  const groups = [['', 'Alle'], ['chest', 'Bryst'], ['shoulder', 'Skuldre'], ['back', 'Rygg'], ['lower_back', 'Korsrygg'], ['biceps', 'Biceps'], ['triceps', 'Triceps'],
+    ['core', 'Mage'], ['glutes', 'Sete'], ['quads', 'Forside lår'], ['hamstrings', 'Hamstring'], ['adductors', 'Innside lår'], ['calves', 'Legger']];
+  return `${backBtn()}<h1>Øvelser</h1>
+    <input type="search" data-filter="app" value="${esc(state.libQ || '')}" placeholder="Søk etter øvelse, utstyr eller muskel">
+    <div class="row wrap" style="margin:10px 0">${groups.map(([k, l]) => `<button class="chip ${mf === k ? 'on' : ''}" data-act="libM" data-m="${k}">${l}</button>`).join('')}</div>
+    <div class="muted small" style="margin-bottom:6px">${list.length} øvelser</div>
+    ${list.length ? `<div class="card list" style="padding:4px 14px">${list.map(ex => `<button class="li pick" data-act="openExercise" data-ex="${ex.id}" data-n="${esc(key(ex))}" ${q && !key(ex).includes(q) ? "hidden" : ""}><div class="grow"><div>${esc(ex.name)}</div><div class="muted small">${esc(implOf(ex).name)}${ex.prim.length ? ' · ' + esc(musNames(ex.prim)) : ''}</div></div><span class="muted">›</span></button>`).join('')}</div>` : '<div class="empty">Ingen øvelser passer søket.</div>'}`;
 }
 function viewWorkoutDetail({ wid }) {
   const w = prof().workouts.find(x => x.id === wid);
@@ -842,6 +1056,7 @@ function viewMore() {
       ${Object.values(db.profiles).length > 1 ? `<div class="muted small" style="margin-top:10px">Bytt profil:</div><div class="row wrap" style="margin-top:6px">${Object.values(db.profiles).map(x => `<button class="chip ${x.id === p.id ? 'on' : ''}" data-act="switchProfile" data-id="${x.id}">${esc(x.name)}</button>`).join('')}</div>` : ''}
       <button class="btn sm" style="margin-top:10px" data-act="addProfile">+ Ny profil på denne enheten</button></div>
     <div class="card list" style="padding:4px 14px">
+      <button class="li" data-act="openLibrary"><span class="grow">📖 Øvelser – teknikk og muskelkart</span><span class="muted">›</span></button>
       <button class="li" data-act="openPlates"><span class="grow">🧮 Skivekalkulator</span><span class="muted">›</span></button>
       <button class="li" data-act="openEquipment"><span class="grow">🏠 Utstyr, skiver og maskiner</span><span class="muted">›</span></button>
       <button class="li" data-act="openCustomEx"><span class="grow">➕ Egne øvelser (${(s.customEx || []).length})</span><span class="muted">›</span></button></div>
@@ -885,14 +1100,14 @@ function viewEquipment() {
 }
 function viewCustomEx() {
   const list = db.settings.customEx || [];
-  return `${backBtn()}<h1>Egne øvelser</h1>${list.length ? `<div class="card list" style="padding:4px 14px">${list.map(e => `<div class="li"><div class="grow"><div>${esc(e.name)}</div><div class="muted small">${esc(implOf(e).name)} · ${esc(e.prim.join(', '))}</div></div><button class="iconbtn" data-act="delCustomEx" data-id="${e.id}">🗑</button></div>`).join('')}</div>` : '<div class="empty">Ingen egne øvelser ennå.</div>'}
+  return `${backBtn()}<h1>Egne øvelser</h1>${list.length ? `<div class="card list" style="padding:4px 14px">${list.map(e => `<div class="li"><div class="grow"><div>${esc(e.name)}</div><div class="muted small">${esc(implOf(e).name)} · ${esc(musNames(e.prim))}</div></div><button class="iconbtn" data-act="delCustomEx" data-id="${e.id}">🗑</button></div>`).join('')}</div>` : '<div class="empty">Ingen egne øvelser ennå.</div>'}
     <button class="btn big" data-act="newCustomEx">+ Ny øvelse</button>`;
 }
 function customExForm() {
   return `<h3>Ny øvelse</h3><label class="f">Navn</label><input id="ceName" placeholder="F.eks. Pendlay-roing">
     <label class="f">Utstyr</label><select id="ceImpl">${Object.entries(db.settings.impl).map(([k, i]) => `<option value="${k}">${esc(i.name)}</option>`).join('')}</select>
     <label class="f">Bevegelse (brukes til forslag ved bytte)</label><select id="cePat">${Object.entries(PATTERNS).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select>
-    <label class="f">Hovedmuskel</label><select id="ceMus">${MUSCLES.map(m => `<option>${m}</option>`).join('')}</select>
+    <label class="f">Hovedmuskel</label><select id="ceMus">${MUSCLES.map(m => `<option value="${m}">${MUS[m]}</option>`).join("")}</select>
     <label class="f">Type</label><select id="ceType"><option value="reps">Vekt × reps</option><option value="time">Tid</option><option value="cardio">Kondisjon (min/km)</option></select>
     <button class="btn acc big" style="margin-top:14px" data-act="saveCustomEx">Lagre</button>`;
 }
@@ -961,7 +1176,7 @@ const ACT = {
     sheet(`<h3>${esc(EX(e.exId).name)}</h3><div class="list">
       <button class="li" data-act="swapEx" data-ei="${d.ei}">🔁 Bytt øvelse</button>
       <button class="li" data-act="editRest" data-ei="${d.ei}">⏱ Endre hviletid (${fmtDur(e.pe.rest || db.settings.rest)})</button>
-      <button class="li" data-act="openExercise" data-ex="${e.exId}">📈 Se historikk</button>
+      <button class="li" data-act="openExercise" data-ex="${e.exId}">ⓘ Om øvelsen og historikk</button>
       <button class="li" data-act="moveEx" data-ei="${d.ei}" data-dir="-1">↑ Flytt opp</button>
       <button class="li" data-act="moveEx" data-ei="${d.ei}" data-dir="1">↓ Flytt ned</button>
       <button class="li" data-act="removeEx" data-ei="${d.ei}" style="color:var(--bad)">🗑 Fjern fra økta</button></div>`);
@@ -1051,6 +1266,8 @@ const ACT = {
   switchProfile: d => { if (P().active && d.id !== db.current) flash('Økta til ' + P().name + ' er lagret og venter'); db.current = d.id; save(); go('train'); },
   addProfile: () => { const n = prompt('Navn på ny profil'); if (!n) return; const p = newProfile(n); db.profiles[p.id] = p; db.current = p.id; save(); go('train'); },
   openPlates: () => push({ type: 'plates' }),
+  openLibrary: () => push({ type: 'library' }),
+  libM: d => { state.libM = d.m; render(); },
   setPlateW: d => { state.plateW = fmtIn(+d.w); render(); },
   openEquipment: () => push({ type: 'equipment' }),
   openCustomEx: () => push({ type: 'customEx' }),
@@ -1115,7 +1332,8 @@ document.addEventListener('input', e => {
     save();
   } else if (el.dataset.filter) {
     const q = el.value.toLowerCase().trim();
-    document.querySelectorAll('#sheetBody .pick').forEach(b => b.hidden = q && !b.dataset.n.includes(q));
+    if (el.dataset.filter === 'app') state.libQ = el.value;
+    document.querySelectorAll(el.dataset.filter === 'app' ? '#app .pick' : '#sheetBody .pick').forEach(b => b.hidden = q && !b.dataset.n.includes(q));
     document.querySelectorAll('#sheetBody .pickhead').forEach(h => h.style.display = q ? 'none' : '');
   }
 });
