@@ -715,7 +715,7 @@ function viewPrograms() {
   return `<h1>Program</h1>` + p.programs.map(pr => `<div class="card">
       <div class="row"><div class="grow"><h3 style="margin:0">${esc(pr.name)}</h3><div class="muted small">${pr.days.length} dager${pr.note ? ' · ' + esc(pr.note) : ''}</div></div>${p.activeIds.includes(pr.id) ? '<span class="badge">Aktiv</span>' : ''}</div>
       <div class="row wrap" style="margin-top:10px">${!p.activeIds.includes(pr.id) ? `<button class="btn sm acc" data-act="useProgram" data-pid="${pr.id}">Bruk</button>` : `<button class="btn sm" data-act="unuseProgram" data-pid="${pr.id}">Ikke aktiv</button>`}
-      <button class="btn sm" data-act="editProgram" data-pid="${pr.id}">Rediger</button><button class="btn sm" data-act="dupProgram" data-pid="${pr.id}">Kopier</button></div></div>`).join('')
+      <button class="btn sm" data-act="editProgram" data-pid="${pr.id}">Rediger</button><button class="btn sm" data-act="dupProgram" data-pid="${pr.id}">Kopier</button><button class="btn sm danger" style="margin-left:auto" data-act="delProgram" data-pid="${pr.id}">Slett</button></div></div>`).join('')
     + `<div class="row"><button class="btn grow" data-act="newProgram">+ Nytt program</button><button class="btn grow" data-act="addTemplates">+ Fra biblioteket</button></div>`;
 }
 function viewProgramEdit({ pid }) {
@@ -998,7 +998,7 @@ const ACT = {
   dupProgram: d => { const pr = clone(progById(d.pid)); pr.id = uid(); pr.name += ' (kopi)'; pr.days.forEach(x => x.id = uid()); P().programs.push(pr); save(); render(); },
   addTemplates: () => sheet(`<h3>Programbibliotek</h3><div class="list">${TEMPLATES().map((t, i) => `<button class="li" data-act="addTemplate" data-i="${i}"><div class="grow"><div><b>${esc(t.name)}</b></div><div class="muted small">${t.days.length} dager · ${esc(t.note || '')}</div></div><span class="chip">Legg til</span></button>`).join('')}</div>`),
   addTemplate: d => { const t = TEMPLATES()[+d.i], p = P(); p.programs.push(t); p.activeIds.push(t.id); save(); closeSheet(); flash('«' + t.name + '» er lagt til og aktivert'); render(); },
-  delProgram: d => { if (!confirm('Slette programmet? Loggførte økter beholdes.')) return; const p = P(); p.programs = p.programs.filter(x => x.id !== d.pid); p.activeIds = p.activeIds.filter(x => x !== d.pid); save(); back(); },
+  delProgram: d => { if (!confirm(`Slette «${progById(d.pid)?.name}»? Loggførte økter beholdes.`)) return; const p = P(); p.programs = p.programs.filter(x => x.id !== d.pid); p.activeIds = p.activeIds.filter(x => x !== d.pid); save(); back(); },
   addDay: d => { const pr = progById(d.pid); pr.days.push(day('Dag ' + (pr.days.length + 1), [])); save(); render(); },
   delDay: d => { if (!confirm('Slette dagen?')) return; progById(d.pid).days.splice(+d.d, 1); P().progState[d.pid] = 0; save(); render(); },
   moveDay: d => { const l = progById(d.pid).days, i = +d.d, j = i + +d.dir; if (j >= 0 && j < l.length) [l[i], l[j]] = [l[j], l[i]]; save(); render(); },
