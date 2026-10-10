@@ -196,7 +196,7 @@ const BUILTIN = [
   E('tbar_row', 'T-bar roing (landmine)', 'landmine', 'hpull', ['Rygg'], ['Biceps']),
   E('landmine_press', 'Landmine press', 'landmine', 'vpush', ['Skuldre', 'Bryst'], ['Triceps']),
   E('legpress', 'Benpress (sittende)', 'legpress', 'squat', ['Forside lår', 'Sete'], [], { inc: 5 }),
-  E('hack', 'Hack squat / stående benpress', 'legpress', 'squat', ['Forside lår', 'Sete'], [], { inc: 5 }),
+  E('hack', 'Hacklift (hack squat)', 'legpress', 'squat', ['Forside lår', 'Sete'], [], { inc: 5 }),
   E('lp_calf', 'Tåhev i benpress', 'legpress', 'calf', ['Legger'], [], { inc: 5 }),
   E('leg_ext', 'Leg extension', 'legext', 'quad_iso', ['Forside lår']),
   E('leg_curl', 'Leg curl', 'legext', 'ham_iso', ['Hamstring']),
@@ -244,7 +244,12 @@ const zoneChip = z => { const i = zoneInfo(z); return `<span class="zone ${i.cls
 const pe = (exId, sets, min, max, rule = 'double', rest = 120, o = {}) => ({ exId, sets, min, max, rule, rest, inc: null, ss: o.ss || '', note: o.note || '', plan: o.plan || null });
 const day = (name, ex) => ({ id: uid(), name, ex });
 // Intervallplan: seg = én fase, reps = gjenta faser n ganger
-const seg = (t, min, z) => [{ t, s: Math.round(min * 60), z: String(z) }];
+// alt = soner man kan velge mellom før start
+const seg = (t, min, z, alt) => [{ t, s: Math.round(min * 60), z: String(z), ...(alt ? { alt } : {}) }];
+const LANGTUR_NOTE = 'Ca. 50 min med jevn fart. Velg sone 2 for en rolig langtur, eller sone 3 for en litt tøffere økt. Rask gange i motbakke (5–10 % stigning) er like bra hvis jogging blir for tungt.';
+// Øvelser som kan erstatte hverandre direkte fra økta
+const ALT_GROUPS = [['squat', 'legpress', 'hack']];
+const altsFor = id => (ALT_GROUPS.find(g => g.includes(id)) || []).filter(x => x !== id && available(EX(x)));
 const reps = (n, segs) => Array.from({ length: n }, (_, i) => segs.map(s => ({ ...s, t: s.t + ' ' + (i + 1) + '/' + n }))).flat();
 const plan = (...parts) => parts.flat();
 const cardio = (exId, p, note) => pe(exId, 1, 1, 1, 'none', 0, { plan: p, note });
@@ -290,8 +295,7 @@ const TEMPLATES = () => [
       'Ca. 30 min. Du skal kunne prate hele tiden. Blir det for tungt: veksle 3 min jogg og 1 min gange.')]),
     day('Intervaller 4×4', [cardio('treadmill', plan(seg('Oppvarming', 10, '1-2'), reps(4, plan(seg('Drag', 4, 4), seg('Pause (gå/jogg)', 3, 2))), seg('Nedtrapping', 5, 1)),
       'Ca. 43 min. De første gangene kan du ta 2–3 drag i stedet for 4. Siste minutt av hvert drag skal være tungt. Øk gjerne stigningen i stedet for farten.')]),
-    day('Langtur (sone 2)', [cardio('treadmill', plan(seg('Oppvarming', 5, 1), seg('Langtur', 40, 2), seg('Nedtrapping', 5, 1)),
-      'Ca. 50 min med jevn, rolig fart. Rask gange i motbakke (5–10 % stigning) er like bra hvis jogging blir for tungt.')]),
+    day('Langtur (sone 2–3)', [cardio('treadmill', plan(seg('Oppvarming', 5, 1), seg('Langtur', 40, 2, ['2', '3']), seg('Nedtrapping', 5, 1)), LANGTUR_NOTE)]),
   ] },
 ];
 
@@ -310,6 +314,10 @@ function load() {
   for (const p of Object.values(db.profiles)) {
     if (!p.activeIds) { p.activeIds = p.activeProgramId ? [p.activeProgramId] : []; delete p.activeProgramId; }
     p.activeIds = p.activeIds.filter(id => p.programs.some(x => x.id === id));
+    // Oppdater Langtur i allerede lagt til kondisjonsprogram med sonevalg
+    for (const pr of p.programs) for (const d of pr.days) for (const x of d.ex) for (const s of x.plan || []) {
+      if (s.t === 'Langtur' && !s.alt) { s.alt = ['2', '3']; x.note = LANGTUR_NOTE; if (d.name === 'Langtur (sone 2)') d.name = 'Langtur (sone 2–3)'; }
+    }
   }
 }
 let saveT;
@@ -665,7 +673,9 @@ function exCard(e, ei) {
     <button class="iconbtn" data-act="exMenu" data-ei="${ei}">⋯</button></div>
     ${x.note ? `<div class="cue">${esc(x.note)}</div>` : ''}
     ${e.note ? `<div class="note ${e.tone}">${esc(e.note)}</div>` : ''}
-    ${x.plan?.length ? planSummary(x.plan) + (ivOn ? '' : `<button class="btn acc big" style="margin-bottom:10px" data-act="ivStart" data-ei="${ei}">▶ Start intervalltimer (${Math.round(planSec(x.plan) / 60)} min)</button>`) : ''}
+    ${altsFor(e.exId).length && !e.sets.some(s => s.done) ? `<div class="row wrap" style="margin:8px 0"><span class="muted small">Bytt til:</span>${altsFor(e.exId).map(id => `<button class="chip" data-act="altEx" data-ei="${ei}" data-id="${id}">${esc(EX(id).name)}</button>`).join('')}</div>` : ''}
+    ${(() => { const alt = x.plan?.find(s => s.alt); return alt && !ivOn ? `<div class="row wrap" style="margin:8px 0"><span class="muted small">Velg sone for ${esc(alt.t.toLowerCase())}:</span>${alt.alt.map(z => `<button class="chip ${alt.z === z ? 'on' : ''}" data-act="ivZone" data-ei="${ei}" data-z="${z}">Sone ${z}</button>`).join('')}</div>` : ''; })()}
+    ${x.plan?.length ? planSummary(x.plan) + (ivOn ? '' :`<button class="btn acc big" style="margin-bottom:10px" data-act="ivStart" data-ei="${ei}">▶ Start intervalltimer (${Math.round(planSec(x.plan) / 60)} min)</button>`) : ''}
     <div class="setgrid sethead"><span>Sett</span><span>${c1}</span><span>${c2}</span><span></span></div>
     ${e.sets.map((s, si) => { const label = s.warm ? 'O' : String(++n);
       return `<div class="setgrid setrow ${s.done ? 'done' : ''} ${s.warm ? 'warm' : ''}">
@@ -978,6 +988,22 @@ const ACT = {
     sheet(`<h2 style="margin-top:0">Bra jobba! 💪</h2><div class="row" style="gap:8px"><div class="stat"><span class="muted small">Tid</span><b>${Math.round((wo.end - wo.date) / 60000)} min</b></div><div class="stat"><span class="muted small">Sett</span><b>${nSets}</b></div><div class="stat"><span class="muted small">Øvelser</span><b>${exs.length}</b></div></div>
       ${prs.length ? `<h3 style="margin-top:16px">🏆 Nye rekorder</h3>${prs.map(x => `<div class="note up">${esc(x)}</div>`).join('')}` : ''}
       <button class="btn acc big" style="margin-top:14px" data-act="closeSheet">Lukk</button>`);
+  },
+  // Bytt til alternativ øvelse og husk valget i programmet
+  altEx: d => {
+    const p = P(), a = p.active, old = a.exercises[+d.ei];
+    a.exercises[+d.ei] = buildEntry(p, d.id, { ...old.pe, exId: d.id, inc: null, note: '' });
+    const pd = a.programId && progById(a.programId)?.days[a.dayIdx];
+    const px = pd?.ex.find(x => x.exId === old.exId);
+    if (px) { px.exId = d.id; px.note = ''; }
+    save(); render(); flash(px ? EX(d.id).name + ' er valgt – huskes til neste gang' : 'Byttet til ' + EX(d.id).name);
+  },
+  ivZone: d => {
+    const a = P().active, e = a.exercises[+d.ei];
+    e.pe.plan.forEach(s => { if (s.alt) s.z = d.z; });
+    const pd = a.programId && progById(a.programId)?.days[a.dayIdx];
+    pd?.ex.forEach(x => (x.plan || []).forEach(s => { if (s.alt) s.z = d.z; }));
+    save(); render();
   },
   ivStart: d => { const a = P().active; a.iv = { ei: +d.ei, start: Date.now(), pausedAt: null, pausedMs: 0, lastIdx: null }; a.restEnd = null; save(); render(); requestWake(); },
   ivPause: () => { const iv = P().active?.iv; if (!iv) return; if (iv.pausedAt) { iv.pausedMs += Date.now() - iv.pausedAt; iv.pausedAt = null; } else iv.pausedAt = Date.now(); save(); tick(); },
