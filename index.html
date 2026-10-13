@@ -65,6 +65,14 @@ label.f { display:block; font-size:13px; color:var(--muted); margin:10px 0 4px; 
 .setrow .in { text-align:center; font-size:20px; font-weight:600; min-height:50px; padding:6px; }
 .setno { height:50px; border-radius:10px; font-weight:700; color:var(--muted); background:var(--card2); }
 .setrow.warm .setno { color:var(--warm); }
+.wohead .grow { min-width:0; } .wohead h1 { font-size:22px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+/* Puls */
+:root { --z1:#5b8def; --z2:#2fa865; --z3:#d9a521; --z4:#e5702a; --z5:#d63b3b; }
+.hrpill { display:inline-flex; align-items:center; gap:4px; height:36px; padding:0 10px; border-radius:18px; background:var(--card2); border:1px solid var(--line); font-size:14px; color:var(--muted); white-space:nowrap; }
+.hrpill.on { color:var(--text); border-color:var(--bad); } .hrpill.on .ico { color:var(--bad); }
+.hrpill .zone { min-width:0; padding:1px 5px; font-size:11px; }
+.hrst { font-weight:700; } .hrst.ok { color:var(--ok); } .hrst.low { color:var(--warm); } .hrst.high { color:var(--bad); }
+#iH .ico { color:var(--bad); }
 /* Felles UI */
 .ico { fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; vertical-align:-4px; flex:none; }
 .ico circle[r="1.3"] { fill:currentColor; }
@@ -192,6 +200,7 @@ svg.chart text { fill:var(--muted); font-size:11px; }
 <div id="timer"></div>
 <div id="sheet"><div class="bd" data-act="closeSheet"></div><div class="pane"><div class="grabzone"><div class="grab"></div><button class="sheetx" data-act="closeSheet" aria-label="Lukk">×</button></div><div id="sheetBody"></div></div></div>
 <input type="file" id="importFile" accept="application/json,.json" hidden>
+<input type="file" id="tcxFile" accept=".tcx,application/vnd.garmin.tcx+xml,application/xml,text/xml" hidden>
 
 <script>
 'use strict';
@@ -225,6 +234,7 @@ const DEFAULT_IMPL = {
   bw:       { name: 'Kroppsvekt (+ ekstra)', kind: 'added' },
   backext:  { name: 'Rygghev (Pivot 610)', kind: 'added' },
   treadmill:{ name: 'Tredemølle', kind: 'cardio' },
+  outdoor:  { name: 'Ute / Garmin', kind: 'cardio' },
 };
 const DEFAULT_PLATES = { '20': 6, '15': 2, '10': 4, '5': 4, '2.5': 4, '1.25': 4, '0.5': 4 }; // antall skiver totalt
 const PLATE_COLORS = { '20': '#2f6fde', '15': '#f2c230', '10': '#2fa865', '5': '#e8e8e8', '2.5': '#e04848', '1.25': '#9aa3ad', '0.5': '#c7ccd2' };
@@ -422,6 +432,10 @@ const BUILTIN = [
   E('incline_walk', 'Tredemølle – gange i motbakke', 'treadmill', 'cardio', [], ['glutes', 'hamstrings', 'calves', 'quads'], { type: 'cardio',
     how: ['Still stigningen på 5–12 %.', 'Gå med rolig, jevnt tempo.', 'Slipp håndtakene – la beina jobbe.', 'Juster stigning eller fart for å holde riktig puls.'],
     err: 'Holder i håndtakene og lener seg bakover, da blir det mye lettere.' }),
+  E('run_outdoor', 'Løping ute', 'outdoor', 'cardio', [], ['quads', 'hamstrings', 'glutes', 'calves'], { type: 'cardio',
+    how: ['Registrer turen på klokka.', 'Last ned økta som TCX fra connect.garmin.com.', 'Importer filen under Fremgang → Importer fra Garmin.'], err: '' }),
+  E('cardio_other', 'Annen kondisjon', 'outdoor', 'cardio', [], ['quads', 'calves'], { type: 'cardio',
+    how: ['Brukes for økter importert fra Garmin som ikke er løping.'], err: '' }),
 ];
 
 /* ---------- Muskelkart ---------- */
@@ -761,6 +775,7 @@ function ivState(a) {
   return { plan, i: plan.length, left: 0, el, done: true };
 }
 function tick() {
+  const live = hrLive(); if (live !== HR.wasLive) { HR.wasLive = live; hrUi(); }
   const el = $('#timer'), a = prof()?.active;
   const elT = $('#elapsed'); if (elT && a) elT.textContent = fmtDur((Date.now() - a.start) / 1000);
   if (a?.iv) return tickInterval(el, a);
@@ -792,6 +807,7 @@ function tickInterval(el, a) {
   setTimerMode(el, iv.pausedAt ? 'ivp' : 'iv', `<div class="inner">
     <div class="row between"><div class="muted tiny" id="iN"></div><div class="muted tiny" id="iTot"></div></div>
     <div class="row" style="margin-top:4px"><div class="grow"><div class="ivphase" id="iP"></div><div class="small" id="iZ"></div></div><div class="t" id="iT"></div></div>
+    <div class="small" id="iH" style="margin-top:6px"></div>
     <div class="muted small" id="iX" style="margin-top:4px"></div><div class="bar"><i id="iB"></i></div>
     <div class="row" style="margin-top:10px"><button class="btn sm grow" data-act="ivPause">${iv.pausedAt ? '▶ Fortsett' : '⏸ Pause'}</button><button class="btn sm grow" data-act="ivSkip">⏭ Neste fase</button><button class="btn sm danger" data-act="ivStop">Stopp</button></div></div>`);
   T('iN').textContent = `Fase ${st.i + 1} av ${st.plan.length}${iv.pausedAt ? ' · PAUSE' : ''}`;
@@ -801,8 +817,133 @@ function tickInterval(el, a) {
   T('iT').textContent = fmtDur(st.left);
   T('iX').textContent = nx ? `Neste: ${nx.t} · ${fmtDur(nx.s)} · ${zoneInfo(nx.z).label}` : 'Siste fase';
   T('iB').style.width = (100 * (1 - st.left / ph.s)) + '%';
+  const ih = T('iH'); if (ih) ih.innerHTML = hrVsZone(ph.z);
 }
 setInterval(tick, 250);
+
+/* ---------- Pulsmåler over Bluetooth (f.eks. Garmin med «Kringkast puls») ---------- */
+// Virker i Chrome på Android. Safari på iPhone har ikke Web Bluetooth.
+const HR = { dev: null, bpm: null, at: 0, status: 'av', name: '', tries: 0, manualOff: false };
+const hrSupported = () => !!navigator.bluetooth;
+const hrLive = () => HR.status === 'på' && HR.bpm && Date.now() - HR.at < 8000;
+function hrZone(bpm) {
+  const max = prof()?.hrMax; if (!max || !bpm) return 0;
+  const pct = 100 * bpm / max;
+  let z = 0; for (let i = 1; i <= 5; i++) if (pct >= ZONES[i][0]) z = i;
+  return z;
+}
+function hrPill() {
+  if (!hrSupported()) return '';
+  const z = hrLive() ? hrZone(HR.bpm) : 0;
+  const inner = hrLive() ? `${icon('heart', 16)} <b>${HR.bpm}</b>${z ? ` <span class="zone z${z}">S${z}</span>` : ''}`
+    : HR.status === 'kobler' ? `${icon('heart', 16)} Kobler …` : `${icon('heart', 16)} Puls`;
+  return `<button class="hrpill ${hrLive() ? 'on' : ''}" data-act="hrMenu">${inner}</button>`;
+}
+// Sammenligner pulsen nå med sonen i fasen (z kan være «2» eller «1-2»)
+function hrVsZone(z) {
+  if (!hrLive()) return '';
+  const max = prof()?.hrMax;
+  if (!max) return `${icon('heart', 16)} <b>${HR.bpm}</b> slag/min · <span class="muted">sett makspuls under Mer for å se sonen</span>`;
+  const [a, b] = String(z).split('-').map(Number), lo = max * ZONES[a][0] / 100, hi = max * ZONES[b || a][1] / 100;
+  const st = HR.bpm < lo ? ['low', 'Øk farten'] : HR.bpm > hi ? ['high', 'Ro ned'] : ['ok', 'I sonen ✓'];
+  return `${icon('heart', 16)} <b>${HR.bpm}</b> slag/min · <span class="hrst ${st[0]}">${st[1]}</span>`;
+}
+function hrUi() { document.querySelectorAll('.hrslot').forEach(el => el.innerHTML = hrPill()); }
+function hrSample() {
+  const a = prof()?.active; if (!a || !HR.bpm) return;
+  const t = Math.round((Date.now() - a.start) / 1000), hs = a.hrs || (a.hrs = []), last = hs[hs.length - 1];
+  if (!last || t - last[0] >= 5) { hs.push([t, HR.bpm]); save(); }
+}
+async function hrConnect() {
+  if (!hrSupported()) { ACT.hrMenu(); return; }
+  HR.manualOff = false;
+  try {
+    let dev = HR.dev;
+    // requestDevice må kalles direkte fra trykket, før noe await
+    const picking = dev ? null : navigator.bluetooth.requestDevice({ filters: [{ services: ['heart_rate'] }] });
+    HR.status = 'kobler'; hrUi();
+    if (picking) {
+      dev = await picking;
+      dev.addEventListener('gattserverdisconnected', hrLost);
+      HR.dev = dev; HR.name = dev.name || 'Pulsmåler';
+    }
+    const srv = await dev.gatt.connect();
+    const ch = await (await srv.getPrimaryService('heart_rate')).getCharacteristic('heart_rate_measurement');
+    ch.addEventListener('characteristicvaluechanged', e => {
+      const v = e.target.value, flags = v.getUint8(0);
+      HR.bpm = flags & 1 ? v.getUint16(1, true) : v.getUint8(1); HR.at = Date.now();
+      hrSample(); hrUi();
+    });
+    await ch.startNotifications();
+    HR.status = 'på'; HR.tries = 0; hrUi(); flash('Koblet til ' + HR.name);
+  } catch (e) {
+    HR.status = 'av'; hrUi();
+    if (e.name !== 'NotFoundError') flash('Fikk ikke koblet til pulsmåleren. Er «Kringkast puls» på?');
+  }
+}
+function hrLost() {
+  HR.status = 'av'; HR.bpm = null; hrUi();
+  if (HR.manualOff || !HR.dev || HR.tries >= 5) return;
+  HR.tries++; setTimeout(() => { if (HR.status === 'av' && HR.dev) hrConnect(); }, 2000);
+}
+function hrDisconnect() { HR.manualOff = true; try { HR.dev?.gatt.disconnect(); } catch {} HR.dev = null; HR.status = 'av'; HR.bpm = null; hrUi(); }
+// Sammendrag av pulsmålinger [[sekund, bpm], …]: snitt, maks og sekunder i hver sone
+function hrSummary(samples, hrMax) {
+  if (!samples || samples.length < 2) return null;
+  const bs = samples.map(s => s[1]), zones = [0, 0, 0, 0, 0, 0];
+  for (let i = 0; i < samples.length - 1; i++) {
+    const dt = Math.min(15, samples[i + 1][0] - samples[i][0]);
+    if (hrMax) { const pct = 100 * samples[i][1] / hrMax; let z = 0; for (let k = 1; k <= 5; k++) if (pct >= ZONES[k][0]) z = k; zones[z] += dt; }
+  }
+  return { avg: Math.round(bs.reduce((a, b) => a + b, 0) / bs.length), max: Math.max(...bs), zones: hrMax ? zones : null, samples };
+}
+function hrCard(hr, start) {
+  if (!hr) return '';
+  const tot = hr.zones ? hr.zones.reduce((a, b) => a + b, 0) || 1 : 1;
+  return `<div class="card"><h3>${icon('heart', 18)} Puls</h3>
+    <div class="row" style="gap:8px"><div class="stat"><span class="muted small">Snitt</span><b>${hr.avg}</b></div><div class="stat"><span class="muted small">Maks</span><b>${hr.max}</b></div></div>
+    ${hr.samples?.length > 2 ? `<div style="margin-top:10px">${lineChart(hr.samples.map(s => ({ x: start + s[0] * 1000, y: s[1] })), 'slag/min', 'time')}</div>` : ''}
+    ${hr.zones ? `<div style="margin-top:8px">${[5, 4, 3, 2, 1].map(z => `<div class="mbar"><span><span class="zone z${z}">Sone ${z}</span></span><span class="tr"><i style="width:${100 * hr.zones[z] / tot}%;background:var(--z${z})"></i></span><span class="small" style="text-align:right">${Math.round(hr.zones[z] / 60)}m</span></div>`).join('')}</div>` : ''}
+  </div>`;
+}
+
+/* ---------- Import av Garmin-økt (TCX fra connect.garmin.com) ---------- */
+function parseTcx(text) {
+  const doc = new DOMParser().parseFromString(text, 'application/xml');
+  if (doc.getElementsByTagName('parsererror').length) throw new Error('Filen er ikke en gyldig TCX-fil');
+  const act = doc.getElementsByTagName('Activity')[0];
+  if (!act) throw new Error('Fant ingen aktivitet i filen');
+  const txt = (el, tag) => el.getElementsByTagName(tag)[0]?.textContent;
+  const idTxt = txt(act, 'Id'), start = Date.parse(idTxt);
+  if (isNaN(start)) throw new Error('Fant ikke starttidspunkt');
+  let sec = 0, meters = 0, lapAvg = [], lapMax = 0;
+  for (const lap of act.getElementsByTagName('Lap')) {
+    sec += +txt(lap, 'TotalTimeSeconds') || 0; meters += +txt(lap, 'DistanceMeters') || 0;
+    const av = lap.getElementsByTagName('AverageHeartRateBpm')[0], mx = lap.getElementsByTagName('MaximumHeartRateBpm')[0];
+    if (av) lapAvg.push(+txt(av, 'Value')); if (mx) lapMax = Math.max(lapMax, +txt(mx, 'Value') || 0);
+  }
+  const samples = [];
+  for (const tp of act.getElementsByTagName('Trackpoint')) {
+    const t = Date.parse(txt(tp, 'Time')), hrEl = tp.getElementsByTagName('HeartRateBpm')[0];
+    if (isNaN(t) || !hrEl) continue;
+    const s = Math.round((t - start) / 1000), b = +txt(hrEl, 'Value');
+    if (b && (!samples.length || s - samples[samples.length - 1][0] >= 5)) samples.push([s, b]);
+  }
+  return { sport: act.getAttribute('Sport') || 'Other', id: idTxt, start, sec, km: meters / 1000, samples,
+    lapAvg: lapAvg.length ? Math.round(lapAvg.reduce((a, b) => a + b, 0) / lapAvg.length) : null, lapMax: lapMax || null };
+}
+function importTcx(text) {
+  const p = prof(), r = parseTcx(text), source = 'tcx:' + r.id;
+  if (p.workouts.some(w => w.source === source)) { flash('Denne økta er allerede importert'); return null; }
+  const run = r.sport === 'Running';
+  const name = run ? 'Løpetur' : r.sport === 'Biking' ? 'Sykkeltur' : 'Kondisjonsøkt';
+  const wo = { id: uid(), date: r.start, end: r.start + r.sec * 1000, programId: null, dayIdx: null, name, notes: 'Importert fra Garmin', source,
+    exercises: [{ exId: run ? 'run_outdoor' : 'cardio_other', pe: {}, sets: [{ w: Math.round(r.sec / 6) / 10, r: Math.round(r.km * 100) / 100, warm: false, done: true }] }],
+    hr: hrSummary(r.samples, p.hrMax) || (r.lapAvg ? { avg: r.lapAvg, max: r.lapMax || r.lapAvg, zones: null, samples: [] } : null) };
+  p.workouts.push(wo); p.workouts.sort((x, y) => x.date - y.date); saveNow();
+  return wo;
+}
+const paceText = (min, km) => min > 0 && km > 0 ? fmtDur(min * 60 / km) + ' /km' : '';
 
 /* ---------- Ikoner (strektegnede, 24×24) ---------- */
 const ICONS = {
@@ -813,6 +954,7 @@ const ICONS = {
   more: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
   dots: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
+  heart: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
   trash: '<path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v6M14 11v6"/>',
   search: '<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/>',
   calc: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.5 7h7M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 16h.01M12 16h.01M15.5 16h.01"/>',
@@ -935,7 +1077,7 @@ function startWorkout(prog, di) {
 function viewActive() {
   const a = prof().active;
   let html = `<div class="wohead"><div class="row"><div class="grow"><div class="muted small">⏱ <span id="elapsed">${fmtDur((Date.now() - a.start) / 1000)}</span></div><h1 style="margin:2px 0 0">${esc(a.name)}</h1></div>
-    <button class="iconbtn" data-act="woMenu">⋯</button><button class="btn acc" data-act="finish">Fullfør</button></div></div>`;
+    <span class="hrslot">${hrPill()}</span><button class="iconbtn" data-act="woMenu">⋯</button><button class="btn acc" data-act="finish">Fullfør</button></div></div>`;
   html += a.exercises.map((e, ei) => exCard(e, ei)).join('');
   if (!a.exercises.length) html += `<div class="empty">Ingen øvelser ennå.</div>`;
   html += `<button class="btn big" data-act="addEx">+ Legg til øvelse</button>
@@ -1075,8 +1217,11 @@ function viewProgramEdit({ pid }) {
 }
 
 /* ---------- Visning: Fremgang ---------- */
-function lineChart(pts, unit) {
+// xfmt = 'time' gir klokkeslett på x-aksen (pulsgraf), ellers dato
+function lineChart(pts, unit, xfmt) {
   if (pts.length < 2) return `<div class="muted small">Trenger minst to økter for å vise graf.</div>`;
+  const xl = v => xfmt === 'time' ? new Date(v).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' }) : new Date(v).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' });
+  const dots = xfmt !== 'time';
   const W = 640, H = 200, pl = 40, pr = 10, pt = 12, pb = 24;
   const ys = pts.map(p => p.y), min = Math.min(...ys), max = Math.max(...ys), span = max - min || 1;
   const x = i => pl + (i / (pts.length - 1)) * (W - pl - pr), y = v => pt + (1 - (v - min) / span) * (H - pt - pb);
@@ -1085,9 +1230,9 @@ function lineChart(pts, unit) {
     <line x1="${pl}" x2="${W - pr}" y1="${y(max)}" y2="${y(max)}" stroke="var(--line)"/><line x1="${pl}" x2="${W - pr}" y1="${y(min)}" y2="${y(min)}" stroke="var(--line)"/>
     <text x="${pl - 6}" y="${y(max) + 4}" text-anchor="end">${fmt(max)}</text><text x="${pl - 6}" y="${y(min) + 4}" text-anchor="end">${fmt(min)}</text>
     <path d="${d}" fill="none" stroke="var(--acc)" stroke-width="2.5" stroke-linejoin="round"/>
-    ${pts.map((p, i) => `<circle cx="${x(i)}" cy="${y(p.y)}" r="3.5" fill="var(--acc)"/>`).join('')}
-    <text x="${pl}" y="${H - 6}">${new Date(pts[0].x).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' })}</text>
-    <text x="${W - pr}" y="${H - 6}" text-anchor="end">${new Date(pts[pts.length - 1].x).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' })}</text></svg>
+    ${dots ? pts.map((p, i) => `<circle cx="${x(i)}" cy="${y(p.y)}" r="3.5" fill="var(--acc)"/>`).join('') : ''}
+    <text x="${pl}" y="${H - 6}">${xl(pts[0].x)}</text>
+    <text x="${W - pr}" y="${H - 6}" text-anchor="end">${xl(pts[pts.length - 1].x)}</text></svg>
     <div class="muted tiny">${unit}</div>`;
 }
 function viewProgress() {
@@ -1130,7 +1275,7 @@ function viewProgress() {
     <div class="sec-title">Øvelser</div>${exRows.length ? `<div class="card list" style="padding:4px 14px">${exRows.map(r => `<button class="li" data-act="openExercise" data-ex="${r.ex.id}"><div class="grow"><div>${esc(r.ex.name)}</div><div class="muted small">${r.n} økter · sist ${fmtDate(r.last)}</div></div>${r.best ? `<div class="small" style="text-align:right"><b>${fmt(Math.round(r.best * 2) / 2)}</b><div class="muted tiny">est. 1RM</div></div>` : ''}<span class="chev">›</span></button>`).join("")}</div>` : '<div class="empty">Fullfør en økt for å se fremgang.</div>'}
     <div class="sec-title">Kroppsvekt</div><div class="card"><div class="row"><input id="bwIn" inputmode="decimal" placeholder="kg" class="grow"><button class="btn acc" data-act="addBw">Lagre</button></div>
       <div style="margin-top:10px">${bw.length ? lineChart(bw.slice(-30).map(b => ({ x: b.date, y: b.kg })), 'kg') + `<div class="muted small">Sist: ${fmt(bw[bw.length - 1].kg)} kg (${fmtDate(bw[bw.length - 1].date)})</div>` : '<div class="muted small">Ingen registreringer ennå.</div>'}</div></div>
-    <div class="sec-title">Historikk</div>${p.workouts.length ? `<div class="card list" style="padding:4px 14px">${[...p.workouts].reverse().slice(0, 60).map(w => `<button class="li" data-act="openWorkout" data-wid="${w.id}"><div class="grow"><div>${esc(w.name)}</div><div class="muted small">${fmtDate(w.date)} · ${w.end ? Math.round((w.end - w.date) / 60000) + ' min · ' : ''}${w.exercises.length} øvelser</div></div><span class="muted">›</span></button>`).join('')}</div>` : '<div class="empty">Ingen økter ennå.</div>'}`;
+    <div class="row between"><div class="sec-title">Historikk</div><button class="btn sm ghost addbtn" style="margin:14px 0 0" data-act="tcxHelp">${icon("upload", 18)} Importer fra Garmin</button></div>${p.workouts.length ? `<div class="card list" style="padding:4px 14px">${[...p.workouts].reverse().slice(0, 60).map(w => `<button class="li" data-act="openWorkout" data-wid="${w.id}"><div class="grow"><div>${esc(w.name)}</div><div class="muted small">${fmtDate(w.date)} · ${w.end ? Math.round((w.end - w.date) / 60000) + ' min · ' : ''}${w.source ? "Garmin · " : ""}${w.exercises.length === 1 && EX(w.exercises[0].exId).type === "cardio" && num(w.exercises[0].sets[0]?.r) ? fmt(num(w.exercises[0].sets[0].r)) + " km" : w.exercises.length + " øvelser"}${w.hr ? " · ♥ " + w.hr.avg : ""}</div></div><span class="chev">›</span></button>`).join('')}</div>` : '<div class="empty">Ingen økter ennå.</div>'}`;
 }
 function viewExercise({ exId }) {
   const p = prof(), ex = EX(exId), h = history(p, exId, 9999).reverse();
@@ -1165,7 +1310,8 @@ function viewWorkoutDetail({ wid }) {
   const w = prof().workouts.find(x => x.id === wid);
   if (!w) { state.stack.pop(); return viewProgress(); }
   return `${backBtn()}<h1>${esc(w.name)}</h1><div class="muted" style="margin:-8px 0 12px">${fmtDate(w.date)} kl. ${new Date(w.date).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' })}${w.end ? ' · ' + Math.round((w.end - w.date) / 60000) + ' min' : ''}</div>
-    ${w.exercises.map(e => { const ex = EX(e.exId); return `<div class="card"><h3>${esc(ex.name)}</h3>${e.sets.map((s, i) => `<div class="row small" style="padding:3px 0"><span class="muted" style="width:26px">${s.warm ? 'O' : ''}</span><span>${ex.type === 'cardio' ? fmt(num(s.w)) + ' min' + (num(s.r) ? ' · ' + fmt(num(s.r)) + ' km' : '') : (num(s.w) ? fmt(num(s.w)) + ' kg × ' : '') + fmt(num(s.r)) + (ex.type === 'time' ? ' s' : '')}</span></div>`).join('')}</div>`; }).join('')}
+    ${w.exercises.map(e => { const ex = EX(e.exId); return `<div class="card"><h3>${esc(ex.name)}</h3>${e.sets.map((s, i) => `<div class="row small" style="padding:3px 0"><span class="muted" style="width:26px">${s.warm ? 'O' : ''}</span><span>${ex.type === 'cardio' ? fmt(num(s.w)) + ' min' + (num(s.r) ? ' · ' + fmt(num(s.r)) + ' km · ' + paceText(num(s.w), num(s.r)) : '') : (num(s.w) ? fmt(num(s.w)) + ' kg × ' : '') + fmt(num(s.r)) + (ex.type === 'time' ? ' s' : '')}</span></div>`).join('')}</div>`; }).join('')}
+    ${hrCard(w.hr, w.date)}
     ${w.notes ? `<div class="card"><h3>Notater</h3>${esc(w.notes)}</div>` : ''}
     <button class="btn danger big" data-act="delWorkout" data-wid="${wid}">Slett økt</button>`;
 }
@@ -1186,6 +1332,10 @@ function viewMore() {
       ${row('openPlates', 'calc', 'Skivekalkulator', 'Hvilke skiver skal på stanga')}
       ${row('openEquipment', 'home', 'Utstyr, skiver og maskiner', 'Startvekter, skiveantall, manualer')}
       ${row('openCustomEx', 'plusbox', 'Egne øvelser', (s.customEx || []).length + ' laget')}</div>
+    <div class="sec-title">Garmin og puls</div>
+    <div class="card list">
+      ${row('hrMenu', 'heart', 'Pulsmåler (Bluetooth)', !hrSupported() ? 'Ikke støttet i denne nettleseren' : hrLive() ? `Tilkoblet ${esc(HR.name)} · ${HR.bpm} slag/min` : 'Koble til klokka under en økt')}
+      ${row('tcxHelp', 'upload', 'Importer økt fra Garmin', 'TCX-fil fra connect.garmin.com')}</div>
     <div class="sec-title">Innstillinger</div>
     <div class="card">
       <div class="setrow2"><span>Standard hviletid</span><select data-change="setting" data-f="rest">${[60, 90, 120, 150, 180, 240].concat([s.rest]).filter((v, i, arr) => arr.indexOf(v) === i).sort((x, y) => x - y).map(v => `<option value="${v}" ${s.rest === v ? 'selected' : ''}>${fmtDur(v)}</option>`).join('')}</select></div>
@@ -1333,13 +1483,14 @@ const ACT = {
     const undone = a.exercises.reduce((n, e) => n + e.sets.filter(s => !s.done && !s.warm).length, 0);
     if (undone && !confirm(`${undone} sett er ikke huket av og blir ikke lagret. Fullføre likevel?`)) return;
     const wo = { id: a.id, date: a.start, end: Date.now(), programId: a.programId, dayIdx: a.dayIdx, name: a.name, notes: a.notes || '', exercises: exs };
+    const hrS = hrSummary(a.hrs, p.hrMax); if (hrS) wo.hr = hrS;
     const prs = computePRs(p, wo);
     p.workouts.push(wo); p.workouts.sort((x, y) => x.date - y.date);
     const prog = a.programId && progById(a.programId);
     if (prog && a.dayIdx != null && prog.days.length) p.progState[prog.id] = (a.dayIdx + 1) % prog.days.length;
     p.active = null; releaseWake(); saveNow(); state.tab = 'train'; state.stack = []; render(); window.scrollTo(0, 0);
     const nSets = exs.reduce((n, e) => n + e.sets.filter(s => !s.warm).length, 0);
-    sheet(`<h2 style="margin-top:0">Bra jobba! 💪</h2><div class="row" style="gap:8px"><div class="stat"><span class="muted small">Tid</span><b>${Math.round((wo.end - wo.date) / 60000)} min</b></div><div class="stat"><span class="muted small">Sett</span><b>${nSets}</b></div><div class="stat"><span class="muted small">Øvelser</span><b>${exs.length}</b></div></div>
+    sheet(`<h2 style="margin-top:0">Bra jobba! 💪</h2><div class="row" style="gap:8px"><div class="stat"><span class="muted small">Tid</span><b>${Math.round((wo.end - wo.date) / 60000)} min</b></div><div class="stat"><span class="muted small">Sett</span><b>${nSets}</b></div>${wo.hr ? `<div class="stat"><span class="muted small">Snittpuls</span><b>${wo.hr.avg}</b></div>` : `<div class="stat"><span class="muted small">Øvelser</span><b>${exs.length}</b></div>`}</div>
       ${prs.length ? `<h3 style="margin-top:16px">🏆 Nye rekorder</h3>${prs.map(x => `<div class="note up">${esc(x)}</div>`).join('')}` : ''}
       <button class="btn acc big" style="margin-top:14px" data-act="closeSheet">Lukk</button>`);
   },
@@ -1371,6 +1522,29 @@ const ACT = {
   timerAdd: d => { const a = P().active; if (a?.restEnd) { a.restEnd += +d.s * 1000; a.restTotal = Math.max(1, (a.restTotal || 0) + +d.s); save(); tick(); } },
   timerStop: () => { const a = P().active; if (a) { a.restEnd = null; save(); } readyUntil = 0; tick(); },
   // Program
+  hrMenu: () => {
+    if (!hrSupported()) return sheet(`<h3>Pulsmåler</h3><p>Denne nettleseren kan ikke koble til Bluetooth-pulsmålere.</p>
+      <p class="muted small">Det virker i Chrome på Android. Apple tillater ikke Bluetooth fra nettapper i Safari på iPhone. Løpeturer fra klokka kan likevel importeres med «Importer fra Garmin».</p>
+      <button class="btn big" data-act="tcxHelp">Importer fra Garmin</button>`);
+    if (hrLive() || HR.status === 'kobler') return sheet(`<h3>Pulsmåler</h3><p>${HR.status === 'kobler' ? 'Kobler til …' : `Tilkoblet <b>${esc(HR.name)}</b> · ${HR.bpm} slag/min`}</p>
+      <p class="muted small">Pulsen lagres sammen med økta. Snitt, maks og tid i hver sone vises når økta er fullført.</p>
+      <button class="btn big danger" data-act="hrOff">Koble fra</button>`);
+    sheet(`<h3>Koble til Garmin-klokka</h3>
+      <ol class="how"><li>Start en aktivitet på klokka, f.eks. <b>Tredemølle</b> eller <b>Styrke</b>.</li>
+        <li>Hold inne <b>OPP</b>-knappen, velg aktivitetsinnstillinger og slå på <b>Kringkast puls</b>.</li>
+        <li>Trykk <b>Koble til</b> under og velg klokka i lista.</li></ol>
+      <p class="muted small">Pulsmålere med Bluetooth, f.eks. Garmin HRM-Dual, virker også. Kringkasting bruker litt mer batteri på klokka.</p>
+      <button class="btn acc big" data-act="hrOn">${icon('heart', 18)} Koble til</button>`);
+  },
+  hrOn: () => { closeSheet(); hrConnect(); },
+  hrOff: () => { closeSheet(); hrDisconnect(); flash('Pulsmåler frakoblet'); render(); },
+  tcxHelp: () => sheet(`<h3>Importer økt fra Garmin</h3>
+    <ol class="how"><li>Åpne <b>connect.garmin.com</b> i nettleseren (logg inn med Garmin-kontoen).</li>
+      <li>Åpne aktiviteten, trykk på tannhjulet ⚙ og velg <b>Eksporter til TCX</b>.</li>
+      <li>Trykk <b>Velg fil</b> under og velg filen fra Nedlastinger.</li></ol>
+    <p class="muted small">Distanse, tid, tempo og puls hentes inn. Har du lagt inn makspuls under Mer, vises også tid i hver pulssone. Garmin Connect-appen på mobilen har ikke eksport, så bruk nettsiden. Velg «Datamaskinversjon» i nettleseren om nødvendig.</p>
+    <button class="btn acc big" data-act="tcxPick">${icon('upload', 18)} Velg fil</button>`),
+  tcxPick: () => $('#tcxFile').click(),
   toggleProgram: d => { const p = P(), on = p.activeIds.includes(d.pid); p.activeIds = on ? p.activeIds.filter(x => x !== d.pid) : p.activeIds.concat(d.pid); save(); render(); flash(on ? 'Skjult fra Trening' : 'Vises nå under Trening'); },
   progMenu: d => { const pr = progById(d.pid); sheet(`<h3>${esc(pr.name)}</h3><div class="list">
       ${d.inedit ? '' : `<button class="li" data-act="editProgram" data-pid="${d.pid}">Rediger</button>`}
@@ -1482,6 +1656,14 @@ document.addEventListener('input', e => {
   }
 });
 document.addEventListener('change', e => { const el = e.target; if (el.dataset.change) CHANGE[el.dataset.change]?.(el.dataset, el); });
+$('#tcxFile').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    const wo = importTcx(await f.text());
+    if (!wo) return;
+    closeSheet(); state.tab = 'progress'; state.stack = []; push({ type: 'workout', wid: wo.id }); flash(wo.name + ' importert');
+  } catch (err) { alert('Kunne ikke importere: ' + err.message); }
+});
 $('#importFile').addEventListener('change', async e => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return;
   try {

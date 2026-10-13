@@ -1,5 +1,5 @@
 // Nettverk først (så oppdateringer kommer med en gang), cache som reserve når garasjen er uten dekning.
-const CACHE = 'garasjegym-v6';
+const CACHE = 'garasjegym-v7';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
