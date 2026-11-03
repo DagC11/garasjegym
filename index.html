@@ -229,7 +229,9 @@ const DEFAULT_IMPL = {
   legpress: { name: 'Benpress/hack (Pivot 800)', kind: 'plates', base: 0, sides: 2 },
   legext:   { name: 'Leg ext/curl (Pivot 640)', kind: 'plates', base: 0, sides: 1 },
   hyper:    { name: 'Reverse hyper (Matrix MG-405)', kind: 'plates', base: 0, sides: 1 },
-  cable:    { name: 'Nedtrekk / roing', kind: 'stack', step: 5, max: 90 },
+  cable:    { name: 'Nedtrekksapparat (90 kg)', kind: 'stack', step: 5, max: 90 },
+  pr_lat:   { name: 'PR 550 – nedtrekk/roing', kind: 'plates', base: 0, sides: 1 },
+  pr_cable: { name: 'PR 550 – kabelstasjon', kind: 'plates', base: 0, sides: 1 },
   db:       { name: 'Manualer', kind: 'dumbbell', list: '3, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 41' },
   bw:       { name: 'Kroppsvekt (+ ekstra)', kind: 'added' },
   backext:  { name: 'Rygghev (Pivot 610)', kind: 'added' },
@@ -254,7 +256,8 @@ const musNames = ids => ids.map(m => MUS[m] || m).join(', ');
 const PATTERNS = { squat: 'Knebøy / benpress', hinge: 'Hofte-hengsel', hpush: 'Horisontal press', vpush: 'Vertikal press', hpull: 'Roing',
   vpull: 'Nedtrekk / pull-ups', lunge: 'Ettbens', quad_iso: 'Lår (isolasjon)', ham_iso: 'Hamstring (isolasjon)', glute: 'Sete',
   backext: 'Rygg-/hofteekstensjon', calf: 'Legger', biceps: 'Biceps', triceps: 'Triceps', side_delt: 'Sideskulder', rear_delt: 'Bakre skulder',
-  shrug: 'Trapes', core: 'Mage', cardio: 'Kondisjon' };
+  shrug: 'Trapes', core: 'Mage', cardio: 'Kondisjon', chest_iso: 'Bryst (isolasjon)', lat_iso: 'Rygg (isolasjon)',
+  abduct: 'Hofteabduksjon', adduct: 'Innside lår' };
 // o.how = steg for utførelse, o.err = vanlige feil
 const E = (id, name, impl, pat, prim, sec = [], o = {}) => ({ id, name, impl, pat, prim, sec, type: o.type || 'reps', needs: o.needs || null, inc: o.inc ?? null, how: o.how || null, err: o.err || '' });
 const BUILTIN = [
@@ -324,10 +327,10 @@ const BUILTIN = [
   E('smith_calf', 'Tåhev i smith', 'smith', 'calf', ['calves'], [], { inc: 5,
     how: ['Stå med fotballene på en skive eller kloss, stanga på skuldrene.', 'Senk hælene så langt ned du kan.', 'Press opp på tærne så høyt som mulig.', 'Hold ett sekund på toppen.'],
     err: 'Spretter i bunnen. For kort bevegelse.' }),
-  E('tbar_row', 'T-bar roing (landmine)', 'landmine', 'hpull', ['lats', 'upper_back'], ['biceps', 'rear_delt', 'lower_back'], {
+  E('tbar_row', 'T-bar roing (landmine)', 'landmine', 'hpull', ['lats', 'upper_back'], ['biceps', 'rear_delt', 'lower_back'], { needs: 'landmine',
     how: ['Stå over stanga med et V-håndtak rundt den.', 'Len deg fram med rett rygg, knærne myke.', 'Trekk skivene mot brystet/magen.', 'Senk kontrollert til strake armer.'],
     err: 'Retter seg opp for å få vekta opp. Runder ryggen.' }),
-  E('landmine_press', 'Landmine press', 'landmine', 'vpush', ['front_delt', 'chest'], ['triceps'], {
+  E('landmine_press', 'Landmine press', 'landmine', 'vpush', ['front_delt', 'chest'], ['triceps'], { needs: 'landmine',
     how: ['Hold enden av stanga ved skulderen (én eller to hender).', 'Stå i utfallsstilling eller parallelt, stram magen.', 'Press stanga opp og fram til armen er strak.', 'Senk kontrollert til skulderen.'],
     err: 'Svaier i ryggen. Presser for mye opp i stedet for fram.' }),
   E('legpress', 'Benpress (sittende)', 'legpress', 'squat', ['quads', 'glutes'], ['adductors'], { inc: 5,
@@ -432,6 +435,82 @@ const BUILTIN = [
   E('incline_walk', 'Tredemølle – gange i motbakke', 'treadmill', 'cardio', [], ['glutes', 'hamstrings', 'calves', 'quads'], { type: 'cardio',
     how: ['Still stigningen på 5–12 %.', 'Gå med rolig, jevnt tempo.', 'Slipp håndtakene – la beina jobbe.', 'Juster stigning eller fart for å holde riktig puls.'],
     err: 'Holder i håndtakene og lener seg bakover, da blir det mye lettere.' }),
+  // ---- Abilica PR 550: rack og kabelstasjon ----
+  E('cable_fly_hl', 'Kabelflyes, høy → lav', 'pr_cable', 'chest_iso', ['chest'], ['front_delt'], {
+    how: ['Still begge trinsene høyt og ta et håndtak i hver hånd.', 'Ta et steg fram og len deg lett fram, med svak bøy i albuene.', 'Før hendene ned og sammen foran nedre del av brystet.', 'Gå kontrollert tilbake til du kjenner strekk i brystet.'],
+    err: 'Bøyer og strekker albuene, så det blir en press. For tung vekt gjør at skuldrene tar over.' }),
+  E('cable_fly_lh', 'Kabelflyes, lav → høy', 'pr_cable', 'chest_iso', ['chest', 'front_delt'], [], {
+    how: ['Still begge trinsene lavt og ta et håndtak i hver hånd.', 'Stå midt mellom stolpene med et lite steg fram.', 'Før hendene opp og sammen foran ansiktet i en bue.', 'Senk kontrollert ned og ut.'],
+    err: 'Løfter skuldrene opp mot ørene. Bruker fart fra kroppen.' }),
+  E('cable_press_1arm', 'Ettarms kabelpress, stående', 'pr_cable', 'hpush', ['chest'], ['front_delt', 'triceps', 'obliques'], {
+    how: ['Still trinsen i brysthøyde og stå med ryggen mot stolpen.', 'Stå i utfallsstilling og stram magen.', 'Press håndtaket rett fram til armen er strak.', 'Ikke la kroppen vri seg – det er en del av øvelsen.'],
+    err: 'Roterer overkroppen med vekta. Albuen flyter høyt ut til siden.' }),
+  E('cable_lat_raise', 'Kabel sideløft, ettarms', 'pr_cable', 'side_delt', ['side_delt'], ['traps'], {
+    how: ['Still trinsen helt nede og stå sidelengs til stolpen.', 'Hold håndtaket i hånden lengst fra trinsen, kabelen foran kroppen.', 'Løft armen ut til siden til skulderhøyde, med svak bøy i albuen.', 'Senk rolig. Alle reps på én side, så bytt.'],
+    err: 'Svinger med overkroppen. Trekker skulderen opp mot øret.' }),
+  E('cable_rear_fly', 'Omvendt kabelflyes', 'pr_cable', 'rear_delt', ['rear_delt'], ['upper_back'], {
+    how: ['Still begge trinsene i skulderhøyde.', 'Kryss kablene: venstre hånd tar høyre kabel og omvendt.', 'Trekk armene ut og bakover med nesten strake armer.', 'Slipp kontrollert tilbake til hendene krysser.'],
+    err: 'Klemmer skulderbladene for mye, så øvre rygg tar over. For tung vekt.' }),
+  E('cable_y_raise', 'Y-løft i kabel', 'pr_cable', 'side_delt', ['side_delt'], ['traps', 'rear_delt'], {
+    how: ['Still begge trinsene nede og kryss kablene foran deg.', 'Løft armene skrått opp og ut til en Y over hodet.', 'Tommelen peker opp, armene nesten strake.', 'Senk rolig.'],
+    err: 'Svaier i ryggen. For tung vekt – denne skal gjøres lett.' }),
+  E('pulldown_1arm', 'Ettarms nedtrekk', 'pr_cable', 'vpull', ['lats'], ['biceps', 'upper_back'], {
+    how: ['Still trinsen høyt. Knel eller sitt rett under den.', 'Start med strak arm og strekk i siden av ryggen.', 'Trekk albuen ned mot hofta.', 'Slipp kontrollert helt opp.'],
+    err: 'Vrir overkroppen for å få vekta ned. Trekker med armen i stedet for ryggen.' }),
+  E('cable_row_1arm', 'Ettarms kabelroing', 'pr_cable', 'hpull', ['lats', 'upper_back'], ['biceps', 'rear_delt'], {
+    how: ['Still trinsen i brysthøyde, eller lavt for sittende variant.', 'Stå i utfallsstilling, motsatt hånd mot stolpen.', 'Trekk albuen bakover langs kroppen mot hofta.', 'Strekk armen fram og la skulderen følge med.'],
+    err: 'Roterer kroppen bakover. Trekker skulderen opp mot øret.' }),
+  E('straight_pulldown', 'Straight-arm pulldown', 'pr_lat', 'lat_iso', ['lats'], ['triceps'], {
+    how: ['Bruk nedtrekksstanga i den høye trinsen og stå et steg unna.', 'Len deg lett fram med nesten strake armer.', 'Press stanga ned i en bue til lårene.', 'Slipp kontrollert opp til strekk i ryggen.'],
+    err: 'Bøyer albuene, så det blir en pushdown. Bruker kroppsvekta.' }),
+  E('pullup_neutral', 'Pull-ups, nøytralt grep', 'bw', 'vpull', ['lats'], ['biceps', 'upper_back', 'forearm'], {
+    how: ['Grip pull-up-håndtakene med håndflatene mot hverandre.', 'Trekk skulderbladene ned først.', 'Trekk deg opp til haka er over håndtakene.', 'Senk deg helt ned.'],
+    err: 'Halve repetisjoner. Svinger med beina.' }),
+  E('inv_row', 'Inverted row (stang i racket)', 'bw', 'hpull', ['upper_back', 'lats'], ['biceps', 'rear_delt'], {
+    how: ['Legg stanga i J-krokene eller på sikkerhetsstolpene i hoftehøyde.', 'Heng under stanga med strake armer og rett kropp, hælene i gulvet.', 'Trekk brystet opp til stanga.', 'Jo høyere stanga står, jo lettere blir det.'],
+    err: 'Hofta henger. Strekker nakken fram mot stanga.' }),
+  E('rackpull', 'Rackpulls', 'barbell', 'hinge', ['glutes', 'lower_back'], ['hamstrings', 'traps', 'upper_back', 'forearm'], { inc: 5,
+    how: ['Legg stanga på sikkerhetsstolpene, rett under eller over knærne.', 'Grip rett utenfor beina, rett rygg og brystet opp.', 'Stram ryggen og driv hofta fram til du står oppreist.', 'Senk kontrollert ned på stolpene.'],
+    err: 'Lener seg bakover på toppen. Runder ryggen fordi vekta er tyngre enn vanlig markløft.' }),
+  E('cable_preacher', 'Preachercurl i kabel', 'pr_cable', 'biceps', ['biceps'], ['forearm'], { needs: 'bench',
+    how: ['Still en skråbenk høyt foran den lave trinsen og fest stanga.', 'Legg overarmene over ryggstøtten.', 'Curl stanga opp uten å løfte albuene.', 'Senk til nesten strake armer.'],
+    err: 'Løfter albuene fra puten. Senker for kort.' }),
+  E('bayesian_curl', 'Bayesian curl', 'pr_cable', 'biceps', ['biceps'], ['forearm'], {
+    how: ['Still trinsen lavt, stå med ryggen til og ta et steg fram.', 'La armen henge litt bak kroppen.', 'Bøy armen fram og opp uten å flytte albuen.', 'Senk til full strekk. Alle reps på én arm, så bytt.'],
+    err: 'Albuen glir fram. For kort steg, så strekken forsvinner.' }),
+  E('rope_hammer', 'Hammercurl med tau', 'pr_cable', 'biceps', ['biceps', 'forearm'], [], {
+    how: ['Fest tauet i den lave trinsen.', 'Hold tauet med tommelen opp, albuene inntil siden.', 'Curl opp mot skuldrene.', 'Senk rolig.'],
+    err: 'Svinger med kroppen. Albuene glir fram.' }),
+  E('cable_oh_tri', 'Triceps over hodet i kabel', 'pr_cable', 'triceps', ['triceps'], [], {
+    how: ['Fest tauet i lav eller midtre trinse og snu ryggen til.', 'Len deg lett fram med hendene bak hodet.', 'Strekk armene fram og opp.', 'Bøy kontrollert tilbake til full strekk.'],
+    err: 'Albuene spriker ut. Svaier i korsryggen.' }),
+  E('pushdown_1arm_rev', 'Ettarms pushdown, omvendt grep', 'pr_cable', 'triceps', ['triceps'], ['forearm'], {
+    how: ['Still trinsen høyt og grip håndtaket med håndflaten opp.', 'Albuen inntil siden.', 'Press ned til armen er strak.', 'La den gå opp til ca. 90° i albuen.'],
+    err: 'Albuen flyter fram. For tung vekt for håndleddet.' }),
+  E('cable_tri_kickback', 'Triceps kickback i kabel', 'pr_cable', 'triceps', ['triceps'], [], {
+    how: ['Still trinsen lavt og len deg fram med rett rygg.', 'Hold overarmen langs kroppen.', 'Strekk armen bakover til den er rett.', 'Bøy kontrollert tilbake.'],
+    err: 'Overarmen svinger. Bruker fart.' }),
+  E('cable_kickback', 'Kabel kickback (sete)', 'pr_cable', 'glute', ['glutes'], ['hamstrings'], {
+    how: ['Fest ankelstroppen og still trinsen helt nede.', 'Hold i racket og len deg litt fram.', 'Spark beinet bakover med strak eller lett bøyd kne.', 'Klem setet på toppen, senk rolig. Alle reps, så bytt.'],
+    err: 'Svaier i korsryggen i stedet for å bruke setet. For mye fart.' }),
+  E('cable_abduct', 'Kabel hofteabduksjon', 'pr_cable', 'abduct', ['glutes'], [], {
+    how: ['Fest ankelstroppen på ytre fot, trinsen helt nede.', 'Stå sidelengs med det andre beinet nærmest stolpen.', 'Før beinet ut til siden, tærne peker fram.', 'Senk rolig tilbake.'],
+    err: 'Lener overkroppen til siden. Vrir tærne opp.' }),
+  E('cable_adduct', 'Kabel adduksjon (innside lår)', 'pr_cable', 'adduct', ['adductors'], [], {
+    how: ['Fest ankelstroppen på foten nærmest stolpen, trinsen helt nede.', 'Stå sidelengs med god avstand.', 'Før beinet inn foran det andre beinet.', 'Slipp kontrollert ut.'],
+    err: 'Bruker fart. For stor vekt – start lett.' }),
+  E('pull_through', 'Pull-through', 'pr_cable', 'hinge', ['glutes', 'hamstrings'], ['lower_back'], {
+    how: ['Fest tauet i den lave trinsen og stå med ryggen til.', 'Hold tauet mellom beina og gå et par steg fram.', 'Skyv hofta bakover med rett rygg.', 'Driv hofta fram og klem setet.'],
+    err: 'Trekker med armene. Bøyer knærne så det blir knebøy.' }),
+  E('pallof', 'Pallof press', 'pr_cable', 'core', ['obliques', 'abs'], [], {
+    how: ['Still trinsen i brysthøyde og stå sidelengs til stolpen.', 'Hold håndtaket med begge hender inntil brystet.', 'Press rett fram og hold 2 sekunder uten å vri deg.', 'Før hendene inn igjen. Reps per side.'],
+    err: 'Lar kabelen vri kroppen. For tung vekt.' }),
+  E('cable_crunch', 'Knelende kabelcrunch', 'pr_cable', 'core', ['abs'], ['obliques'], {
+    how: ['Fest tauet i den høye trinsen og knel foran stolpen.', 'Hold tauet ved siden av hodet.', 'Rull overkroppen ned mot knærne med magen.', 'Rull kontrollert opp igjen.'],
+    err: 'Bøyer i hofta i stedet for å krølle ryggen. Trekker med armene.' }),
+  E('woodchop', 'Woodchopper, høy → lav', 'pr_cable', 'core', ['obliques'], ['abs', 'front_delt'], {
+    how: ['Still trinsen høyt og stå sidelengs.', 'Grip håndtaket med begge hender over skulderen.', 'Trekk diagonalt ned mot motsatt kne og roter fra hofta.', 'Gå kontrollert tilbake. Reps per side.'],
+    err: 'Bøyer armene og trekker med dem. Roterer bare i korsryggen.' }),
   E('run_outdoor', 'Løping ute', 'outdoor', 'cardio', [], ['quads', 'hamstrings', 'glutes', 'calves'], { type: 'cardio',
     how: ['Registrer turen på klokka.', 'Last ned økta som TCX fra connect.garmin.com.', 'Importer filen under Fremgang → Importer fra Garmin.'], err: '' }),
   E('cardio_other', 'Annen kondisjon', 'outdoor', 'cardio', [], ['quads', 'calves'], { type: 'cardio',
@@ -514,7 +593,8 @@ const day = (name, ex) => ({ id: uid(), name, ex });
 const seg = (t, min, z, alt) => [{ t, s: Math.round(min * 60), z: String(z), ...(alt ? { alt } : {}) }];
 const LANGTUR_NOTE = 'Ca. 50 min med jevn fart. Velg sone 2 for en rolig langtur, eller sone 3 for en litt tøffere økt. Rask gange i motbakke (5–10 % stigning) er like bra hvis jogging blir for tungt.';
 // Øvelser som kan erstatte hverandre direkte fra økta
-const ALT_GROUPS = [['squat', 'legpress', 'hack']];
+const ALT_GROUPS = [['squat', 'legpress', 'hack'], ['deadlift', 'rackpull'], ['lat_raise', 'cable_lat_raise'], ['pulldown_cg', 'pulldown', 'inv_row'],
+  ['cable_row', 'cable_row_1arm'], ['plank', 'pallof'], ['hammer', 'rope_hammer'], ['ez_curl', 'cable_preacher'], ['back_ext', 'pull_through']];
 const altsFor = id => (ALT_GROUPS.find(g => g.includes(id)) || []).filter(x => x !== id && available(EX(x)));
 const reps = (n, segs) => Array.from({ length: n }, (_, i) => segs.map(s => ({ ...s, t: s.t + ' ' + (i + 1) + '/' + n }))).flat();
 const plan = (...parts) => parts.flat();
@@ -526,15 +606,15 @@ const TEMPLATES = () => [
     day('Økt B', [pe('deadlift', 2, 5, 5, 'linear', 180), pe('ohp', 3, 5, 5, 'linear', 150), pe('cable_row', 3, 8, 12), pe('legpress', 3, 10, 15), pe('ez_curl', 3, 8, 12, 'double', 75), pe('rev_hyper', 3, 12, 15, 'double', 75)]),
   ] },
   { id: uid(), name: 'Overkropp/underkropp – 4 dager', note: 'Tung og lett variant av hver. F.eks. man/tir/tor/fre.', days: [
-    day('Overkropp 1 (tung)', [pe('bench', 4, 4, 6, 'double', 180), pe('bb_row', 4, 6, 8, 'double', 150), pe('db_ohp', 3, 8, 10), pe('pulldown', 3, 8, 12), pe('ez_curl', 3, 10, 12, 'double', 75), pe('pushdown', 3, 10, 15, 'double', 75)]),
+    day('Overkropp 1 (tung)', [pe('bench', 4, 4, 6, 'double', 180), pe('bb_row', 4, 6, 8, 'double', 150), pe('db_ohp', 3, 8, 10), pe('pulldown', 3, 8, 12), pe('cable_fly_hl', 3, 12, 15, 'double', 60), pe('ez_curl', 3, 10, 12, 'double', 75), pe('pushdown', 3, 10, 15, 'double', 75)]),
     day('Underkropp 1 (tung)', [pe('squat', 4, 4, 6, 'double', 180), pe('rdl', 3, 6, 8, 'double', 150), pe('legpress', 3, 10, 12), pe('leg_curl', 3, 10, 15, 'double', 90), pe('smith_calf', 4, 10, 15, 'double', 60), pe('hlr', 3, 10, 15, 'none', 60)]),
-    day('Overkropp 2 (volum)', [pe('db_incline', 4, 8, 12), pe('tbar_row', 4, 8, 12), pe('pullup', 3, 5, 10, 'double', 120), pe('lat_raise', 4, 12, 20, 'double', 60), pe('hammer', 3, 10, 12, 'double', 60), pe('skull', 3, 10, 12, 'double', 75)]),
-    day('Underkropp 2 (volum)', [pe('deadlift', 3, 3, 5, 'double', 180), pe('hack', 3, 8, 12), pe('bulgarian', 3, 8, 12, 'double', 90), pe('leg_ext', 3, 12, 15, 'double', 75), pe('rev_hyper', 3, 12, 15, 'double', 75), pe('back_ext', 3, 10, 15, 'double', 75)]),
+    day('Overkropp 2 (volum)', [pe('db_incline', 4, 8, 12), pe('cable_row_1arm', 4, 8, 12), pe('pullup', 3, 5, 10, 'double', 120), pe('lat_raise', 4, 12, 20, 'double', 60), pe('cable_preacher', 3, 10, 12, 'double', 60), pe('skull', 3, 10, 12, 'double', 75)]),
+    day('Underkropp 2 (volum)', [pe('rackpull', 3, 3, 5, 'double', 180), pe('hack', 3, 8, 12), pe('bulgarian', 3, 8, 12, 'double', 90), pe('leg_ext', 3, 12, 15, 'double', 75), pe('rev_hyper', 3, 12, 15, 'double', 75), pe('back_ext', 3, 10, 15, 'double', 75)]),
   ] },
   { id: uid(), name: 'Bein & sete + overkropp – 3 dager', note: 'To beindager med sete-fokus og én overkroppsdag.', days: [
-    day('Bein & sete 1', [pe('hip_thrust', 4, 8, 12, 'double', 120), pe('hack', 3, 8, 12), pe('rdl', 3, 8, 10, 'double', 120), pe('leg_curl', 3, 10, 15, 'double', 75), pe('rev_hyper', 3, 12, 15, 'double', 75)]),
+    day('Bein & sete 1', [pe('hip_thrust', 4, 8, 12, 'double', 120), pe('hack', 3, 8, 12), pe('rdl', 3, 8, 10, 'double', 120), pe('leg_curl', 3, 10, 15, 'double', 75), pe('rev_hyper', 3, 12, 15, 'double', 75), pe('cable_kickback', 3, 12, 15, 'double', 60), pe('cable_abduct', 3, 15, 20, 'double', 60)]),
     day('Overkropp', [pe('db_bench', 3, 8, 12), pe('cable_row', 3, 10, 12), pe('db_ohp', 3, 8, 12), pe('pulldown_cg', 3, 10, 12), pe('lat_raise', 3, 12, 20, 'double', 60), pe('face_pull', 3, 12, 15, 'double', 60)]),
-    day('Bein & sete 2', [pe('smith_squat', 4, 6, 10, 'double', 150), pe('bulgarian', 3, 8, 12, 'double', 90), pe('back_ext', 3, 12, 15, 'double', 75), pe('leg_ext', 3, 12, 15, 'double', 75), pe('lp_calf', 3, 12, 15, 'double', 60), pe('plank', 3, 30, 60, 'none', 60)]),
+    day('Bein & sete 2', [pe('smith_squat', 4, 6, 10, 'double', 150), pe('bulgarian', 3, 8, 12, 'double', 90), pe('pull_through', 3, 12, 15, 'double', 75), pe('leg_ext', 3, 12, 15, 'double', 75), pe('lp_calf', 3, 12, 15, 'double', 60), pe('plank', 3, 30, 60, 'none', 60)]),
   ] },
   { id: uid(), name: 'Kom i gang – helkropp A/B', note: '2–3 økter i uka, veksle A og B. Ca. 35–40 min. Supersett: ett sett av 1, så ett av 2, hvil, gjenta.', days: [
     day('Kom i gang A', [
@@ -544,7 +624,7 @@ const TEMPLATES = () => [
       pe('legpress', 3, 10, 15, 'double', 90, { ss: 'B', note: 'Senk sleden kontrollert til ca. 90° i kneet. Ikke lås knærne helt ut.' }),
       pe('db_bench', 3, 8, 12, 'double', 90, { ss: 'B', note: 'Skulderbladene samlet mot benken, senk manualene til de er i høyde med brystet.' }),
       pe('leg_curl', 2, 10, 15, 'double', 60, { ss: 'C', note: 'Rolig ned, ca. 2–3 sek.' }),
-      pe('plank', 2, 20, 40, 'none', 60, { ss: 'C', note: 'Rett linje fra hode til hæl. Stram mage og sete.' }),
+      pe('pallof', 2, 8, 12, 'double', 60, { ss: 'C', note: 'Reps per side. Press rett fram og hold 2 sek uten å la kabelen vri deg.' }),
     ]),
     day('Kom i gang B', [
       warmWalk(),
@@ -553,7 +633,7 @@ const TEMPLATES = () => [
       pe('smith_split', 2, 8, 10, 'double', 90, { ss: 'B', note: 'Reps per bein. Stanga i smithen gir god balanse. Bakre kne nesten ned i gulvet.' }),
       pe('db_ohp', 3, 8, 12, 'double', 90, { ss: 'B', note: 'Gjerne sittende. Press rett opp, ikke svai i ryggen.' }),
       pe('back_ext', 2, 10, 15, 'double', 60, { ss: 'C', note: 'Kontrollert ned og opp til rett linje. Ikke overstrekk ryggen.' }),
-      pe('lat_raise', 2, 10, 15, 'double', 60, { ss: 'C', note: 'Lette manualer, løft til skulderhøyde med svak bøy i albuene.' }),
+      pe('cable_lat_raise', 2, 10, 15, 'double', 60, { ss: 'C', note: 'Trinsen helt nede og lett vekt. Reps per arm, løft til skulderhøyde.' }),
     ]),
   ] },
   { id: uid(), name: 'Kondisjon på mølla – 3 økter', note: 'Velg dag fritt. Sett makspuls under Mer for å se pulsen i hver sone. Uten pulsmåler: bruk prat-testen.', days: [
@@ -569,6 +649,25 @@ const TEMPLATES = () => [
 const KEY = 'garasjegym.v1';
 let db;
 function newProfile(name) { const programs = TEMPLATES(); return { id: uid(), name, programs, activeIds: [programs[0].id], progState: {}, workouts: [], bw: [], active: null, hrMax: null }; }
+// Engangsoppdatering da Abilica PR 550 kom: nye kabeløvelser inn i malene som allerede ligger i profilen
+function migratePR550(p) {
+  const prog = name => p.programs.find(x => x.name === name), dayOf = (pr, n) => pr?.days.find(d => d.name === n);
+  const swap = (d, from, to, extra = {}) => { const x = d?.ex.find(y => y.exId === from); if (x) Object.assign(x, { exId: to, inc: null, note: '' }, extra); };
+  const add = (d, after, x) => { if (!d || d.ex.some(y => y.exId === x.exId)) return; const i = d.ex.findIndex(y => y.exId === after); d.ex.splice(i < 0 ? d.ex.length : i + 1, 0, x); };
+  const ou = prog('Overkropp/underkropp – 4 dager');
+  add(dayOf(ou, 'Overkropp 1 (tung)'), 'pulldown', pe('cable_fly_hl', 3, 12, 15, 'double', 60));
+  swap(dayOf(ou, 'Overkropp 2 (volum)'), 'hammer', 'cable_preacher');
+  swap(dayOf(ou, 'Underkropp 2 (volum)'), 'deadlift', 'rackpull');
+  const bs = prog('Bein & sete + overkropp – 3 dager');
+  add(dayOf(bs, 'Bein & sete 1'), 'rev_hyper', pe('cable_kickback', 3, 12, 15, 'double', 60));
+  add(dayOf(bs, 'Bein & sete 1'), 'cable_kickback', pe('cable_abduct', 3, 15, 20, 'double', 60));
+  swap(dayOf(bs, 'Bein & sete 2'), 'back_ext', 'pull_through');
+  const kg = prog('Kom i gang – helkropp A/B');
+  swap(dayOf(kg, 'Kom i gang A'), 'plank', 'pallof', { min: 8, max: 12, rule: 'double', note: 'Reps per side. Press rett fram og hold 2 sek uten å la kabelen vri deg.' });
+  swap(dayOf(kg, 'Kom i gang B'), 'lat_raise', 'cable_lat_raise', { note: 'Trinsen helt nede og lett vekt. Reps per arm, løft til skulderhøyde.' });
+  // Landmine-øvelser byttes ut i alle program, siden landmine-røret fulgte det gamle racket
+  for (const pr of p.programs) for (const d of pr.days) { swap(d, 'tbar_row', 'cable_row_1arm'); swap(d, 'landmine_press', 'db_ohp'); }
+}
 function load() {
   try { db = JSON.parse(localStorage.getItem(KEY)); } catch { db = null; }
   if (!db || !db.profiles) {
@@ -579,6 +678,9 @@ function load() {
   for (const k in DEFAULT_IMPL) if (!db.settings.impl[k]) db.settings.impl[k] = clone(DEFAULT_IMPL[k]);
   if (db.settings.impl.barbell.name === 'Olympisk stang (20 kg)') db.settings.impl.barbell.name = 'Olympisk stang';
   for (const e of db.settings.customEx || []) { e.prim = (e.prim || []).map(m => OLD_MUS[m] || m); e.sec = (e.sec || []).map(m => OLD_MUS[m] || m); }
+  if (db.settings.landmine === undefined) db.settings.landmine = false; // landmine-røret fulgte det gamle racket
+  if (db.settings.impl.cable.name === 'Nedtrekk / roing') db.settings.impl.cable.name = 'Nedtrekksapparat (90 kg)';
+  for (const p of Object.values(db.profiles)) { if (!p.mig?.pr550) { migratePR550(p); (p.mig = p.mig || {}).pr550 = true; } }
   for (const p of Object.values(db.profiles)) {
     if (!p.activeIds) { p.activeIds = p.activeProgramId ? [p.activeProgramId] : []; delete p.activeProgramId; }
     p.activeIds = p.activeIds.filter(id => p.programs.some(x => x.id === id));
@@ -599,7 +701,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveN
 const allEx = () => BUILTIN.concat(db.settings.customEx || []);
 const EX = id => allEx().find(e => e.id === id) || { id, name: '(ukjent øvelse)', impl: 'bw', pat: 'core', prim: [], sec: [], type: 'reps' };
 const implOf = ex => db.settings.impl[ex.impl] || { name: '?', kind: 'added' };
-const available = ex => !(ex.needs === 'bench' && !db.settings.bench);
+const available = ex => !(ex.needs === 'bench' && !db.settings.bench) && !(ex.needs === 'landmine' && !db.settings.landmine);
 
 /* ---------- Vekt- og skiveberegning ---------- */
 const U = 4; // 0,25 kg-enheter
@@ -1370,7 +1472,8 @@ function viewEquipment() {
     <div class="card"><h3>Vektskiver</h3><div class="muted small">Totalt antall skiver av hver størrelse (ikke par).</div>
       <div class="pe-grid">${plates.map(p => `<div><label>${fmt(p)} kg</label><input inputmode="numeric" data-change="plateCount" data-p="${p}" value="${s.plates[String(p)]}"></div>`).join('')}</div>
       <div class="muted small" style="margin-top:8px">Totalt: ${fmt(plates.reduce((a, p) => a + p * (+s.plates[String(p)] || 0), 0))} kg</div></div>
-    <div class="card"><h3>Benk</h3><label class="f">Har dere flat/skrå benk?</label><select data-change="setting" data-f="bench"><option value="1" ${s.bench ? 'selected' : ''}>Ja</option><option value="0" ${!s.bench ? 'selected' : ''}>Nei – skjul benkøvelser</option></select></div>
+    <div class="card"><h3>Benk og rack</h3><label class="f">Har dere flat/skrå benk?</label><select data-change="setting" data-f="bench"><option value="1" ${s.bench ? 'selected' : ''}>Ja</option><option value="0" ${!s.bench ? "selected" : ""}>Nei – skjul benkøvelser</option></select>
+      <label class="f">Har dere landmine-tilbehør?</label><select data-change="setting" data-f="landmine"><option value="1" ${s.landmine ? "selected" : ""}>Ja</option><option value="0" ${!s.landmine ? "selected" : ""}>Nei – skjul T-bar roing og landmine press</option></select></div>
     <div class="card"><h3>Stenger og maskiner med skiver</h3><div class="muted small">Startvekt = stang/slede uten skiver. «Sider» = 2 hvis skivene lastes likt på begge sider, 1 hvis ett horn. Sett startvekt 0 for maskiner der dere bare vil logge skivene.</div>
       ${Object.entries(s.impl).filter(([, i]) => i.kind === 'plates').map(([k, i]) => `<div style="margin-top:12px"><b>${esc(i.name)}</b><div class="pe-grid" style="grid-template-columns:1fr 1fr"><div><label>Startvekt kg</label><input inputmode="decimal" data-change="implField" data-k="${k}" data-f="base" value="${fmtIn(i.base)}"></div><div><label>Sider</label><select data-change="implField" data-k="${k}" data-f="sides"><option value="2" ${i.sides === 2 ? 'selected' : ''}>2</option><option value="1" ${i.sides === 1 ? 'selected' : ''}>1</option></select></div></div></div>`).join('')}</div>
     <div class="card"><h3>Nedtrekk / roing</h3><div class="pe-grid" style="grid-template-columns:1fr 1fr"><div><label>Steg kg</label><input inputmode="decimal" data-change="implField" data-k="cable" data-f="step" value="${fmtIn(s.impl.cable.step)}"></div><div><label>Maks kg</label><input inputmode="decimal" data-change="implField" data-k="cable" data-f="max" value="${fmtIn(s.impl.cable.max)}"></div></div></div>
