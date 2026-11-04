@@ -35,6 +35,12 @@ Adressen er offentlig, men ingen treningsdata ligger der. Dataene lagres bare p�
    - om dere har benk
 3. **Program:** Velg en mal, eller lag et eget program.
 
+## Under økta
+
+- Et sett hukes av med ✓ etter at vekt og reps er skrevet inn. Tallet som ligger i feltet fra før er et *mål* (forslag), ikke et resultat.
+- Hviletimeren er basert på klokkeslett og tåler at du bytter app, men lyd og vibrasjon kommer bare mens appen er åpen på skjermen. Skjermen holdes våken så lenge en økt er i gang.
+- Skrivefeil kan rettes etterpå: åpne økta under **Fremgang → Historikk** og endre tallene, eller slett et sett.
+
 ## Sikkerhetskopi
 
-**Mer → Eksporter** lager en JSON-fil. Lagre den i Filer, Google Drive eller e-post. **Importer** henter den inn igjen, også på en ny telefon.
+**Mer → Eksporter** lager en JSON-fil. Lagre den i Filer, Google Drive eller e-post. **Importer** henter den inn igjen, også på en ny telefon. Appen minner deg på eksport når det er logget økter som ikke er sikkerhetskopiert.

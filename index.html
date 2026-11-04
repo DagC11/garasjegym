@@ -28,7 +28,8 @@
 * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 html, body { margin:0; background:var(--bg); color:var(--text); }
 body { font:16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  padding:calc(env(safe-area-inset-top) + 8px) 16px calc(env(safe-area-inset-bottom) + 260px); max-width:720px; margin:0 auto; }
+  padding:calc(env(safe-area-inset-top) + 8px) 16px calc(env(safe-area-inset-bottom) + 96px); max-width:720px; margin:0 auto; }
+body.hastimer { padding-bottom:calc(env(safe-area-inset-bottom) + 260px); } /* plass til hvile-/intervalltimeren over fanene */
 h1 { font-size:26px; margin:6px 0 14px; letter-spacing:-.02em; }
 h2 { font-size:18px; margin:22px 0 10px; }
 h3 { font-size:16px; margin:0 0 6px; }
@@ -215,6 +216,8 @@ const fmtIn = n => n == null || n === '' ? '' : String(Math.round(n * 100) / 100
 const fmtDate = ts => new Date(ts).toLocaleDateString('nb-NO', { weekday: 'short', day: 'numeric', month: 'short' });
 const fmtDur = s => { s = Math.max(0, Math.round(s)); const m = Math.floor(s / 60), ss = s % 60; return m + ':' + String(ss).padStart(2, '0'); };
 const weekStart = ts => { const d = new Date(ts); const day = (d.getDay() + 6) % 7; d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - day); return d.getTime(); };
+// Kalenderdager, ikke 24-timersbolker: ved sommertid er et døgn 23 eller 25 timer, så ms-aritmetikk bommer én time
+const addDays = (ts, n) => { const d = new Date(ts); d.setDate(d.getDate() + n); return d.getTime(); };
 const clone = o => JSON.parse(JSON.stringify(o));
 function flash(msg) { const d = document.createElement('div'); d.className = 'flash'; d.textContent = msg; document.body.appendChild(d); setTimeout(() => d.remove(), 2600); }
 
@@ -668,8 +671,23 @@ function migratePR550(p) {
   // Landmine-øvelser byttes ut i alle program, siden landmine-røret fulgte det gamle racket
   for (const pr of p.programs) for (const d of pr.days) { swap(d, 'tbar_row', 'cable_row_1arm'); swap(d, 'landmine_press', 'db_ohp'); }
 }
+// Sjekker at en importert fil har strukturen appen forventer. Returnerer feilmelding, eller '' hvis OK.
+function validateDb(d) {
+  if (!d || typeof d !== 'object' || !d.settings || typeof d.settings !== 'object' || !d.profiles || typeof d.profiles !== 'object') return 'Ikke en Garasjegym-fil';
+  const ps = Object.values(d.profiles);
+  if (!ps.length) return 'Filen har ingen profiler';
+  for (const p of ps) {
+    if (!p || typeof p !== 'object' || typeof p.name !== 'string' || !Array.isArray(p.programs) || !Array.isArray(p.workouts)) return `Profilen «${p?.name ?? '?'}» i filen er ødelagt`;
+    if (p.workouts.some(w => !w || typeof w.date !== 'number' || !Array.isArray(w.exercises))) return `En økt hos «${p.name}» i filen er ødelagt`;
+    if (p.programs.some(pr => !pr || !Array.isArray(pr.days))) return `Et program hos «${p.name}» i filen er ødelagt`;
+  }
+  if (!d.settings.impl || typeof d.settings.impl !== 'object') return 'Utstyrsoppsettet i filen er ødelagt';
+  return '';
+}
 function load() {
+  exMap = null;
   try { db = JSON.parse(localStorage.getItem(KEY)); } catch { db = null; }
+  if (db && validateDb(db)) db = null; // ødelagt lagring: start på nytt i stedet for å krasje ved oppstart
   if (!db || !db.profiles) {
     const p = newProfile('Meg');
     db = { v: 1, settings: { impl: clone(DEFAULT_IMPL), plates: { ...DEFAULT_PLATES }, bench: true, rest: 120, sound: true, theme: 'dark', customEx: [] }, profiles: { [p.id]: p }, current: p.id };
@@ -681,7 +699,21 @@ function load() {
   if (db.settings.landmine === undefined) db.settings.landmine = false; // landmine-røret fulgte det gamle racket
   if (db.settings.impl.cable.name === 'Nedtrekk / roing') db.settings.impl.cable.name = 'Nedtrekksapparat (90 kg)';
   for (const p of Object.values(db.profiles)) { if (!p.mig?.pr550) { migratePR550(p); (p.mig = p.mig || {}).pr550 = true; } }
+  // Versjonerte migreringer av lagringsformatet, kjøres i rekkefølge
+  const MIG = {
+    // v2: programoppsett ble lagret i hver fullført økt, og puls hvert 5. sekund. Krymper gamle økter.
+    2: () => { for (const p of Object.values(db.profiles)) for (const w of p.workouts) {
+      for (const e of w.exercises) delete e.pe;
+      if (w.hr?.samples?.length > 2) { const out = []; for (const s of w.hr.samples) if (!out.length || s[0] - out[out.length - 1][0] >= HR_STEP) out.push(s); w.hr.samples = out; }
+    } },
+  };
+  for (const v of Object.keys(MIG).map(Number).sort((a, b) => a - b)) if ((db.v || 1) < v) { MIG[v](); db.v = v; }
+  if (!db.profiles[db.current]) db.current = Object.keys(db.profiles)[0];
+  if (!db.settings.plates) db.settings.plates = { ...DEFAULT_PLATES };
   for (const p of Object.values(db.profiles)) {
+    if (!Array.isArray(p.bw)) p.bw = [];
+    if (!p.progState) p.progState = {};
+    if (!p.active || typeof p.active !== 'object' || !Array.isArray(p.active.exercises)) p.active = null;
     if (!p.activeIds) { p.activeIds = p.activeProgramId ? [p.activeProgramId] : []; delete p.activeProgramId; }
     p.activeIds = p.activeIds.filter(id => p.programs.some(x => x.id === id));
     // Oppdater Langtur i allerede lagt til kondisjonsprogram med sonevalg
@@ -699,7 +731,9 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveN
 
 /* ---------- Øvelsesoppslag ---------- */
 const allEx = () => BUILTIN.concat(db.settings.customEx || []);
-const EX = id => allEx().find(e => e.id === id) || { id, name: '(ukjent øvelse)', impl: 'bw', pat: 'core', prim: [], sec: [], type: 'reps' };
+// Oppslag per id bygges én gang og nullstilles (exMap = null) når egne øvelser endres eller data lastes
+let exMap = null;
+const EX = id => (exMap || (exMap = new Map(allEx().map(e => [e.id, e])))).get(id) || { id, name: '(ukjent øvelse)', impl: 'bw', pat: 'core', prim: [], sec: [], type: 'reps' };
 const implOf = ex => db.settings.impl[ex.impl] || { name: '?', kind: 'added' };
 const available = ex => !(ex.needs === 'bench' && !db.settings.bench) && !(ex.needs === 'landmine' && !db.settings.landmine);
 
@@ -867,7 +901,7 @@ function beep() { tone([880, 880, 1320]); try { navigator.vibrate?.([200, 100, 2
 // Skjelettet byttes bare når modus endres; ellers oppdateres kun tekst, slik at knappene ikke byttes ut midt i et trykk.
 let readyUntil = 0, timerMode = '';
 function startRest(sec) { const a = prof().active; if (!a) return; a.restEnd = Date.now() + sec * 1000; a.restTotal = sec; a.restBeeped = false; save(); tick(); }
-function setTimerMode(el, mode, html) { if (timerMode !== mode) { timerMode = mode; el.innerHTML = html; } el.style.display = mode ? 'block' : 'none'; el.classList.toggle('ready', mode === 'ready'); }
+function setTimerMode(el, mode, html) { if (timerMode !== mode) { timerMode = mode; el.innerHTML = html; } el.style.display = mode ? 'block' : 'none'; el.classList.toggle('ready', mode === 'ready'); document.body.classList.toggle('hastimer', !!mode); }
 const T = id => document.getElementById(id);
 function ivState(a) {
   const iv = a.iv, plan = a.exercises[iv.ei]?.pe.plan || [];
@@ -926,6 +960,7 @@ setInterval(tick, 250);
 /* ---------- Pulsmåler over Bluetooth (f.eks. Garmin med «Kringkast puls») ---------- */
 // Virker i Chrome på Android. Safari på iPhone har ikke Web Bluetooth.
 const HR = { dev: null, bpm: null, at: 0, status: 'av', name: '', tries: 0, manualOff: false };
+const HR_STEP = 15; // sekunder mellom lagrede pulsprøver (en times økt = 240 prøver)
 const hrSupported = () => !!navigator.bluetooth;
 const hrLive = () => HR.status === 'på' && HR.bpm && Date.now() - HR.at < 8000;
 function hrZone(bpm) {
@@ -954,7 +989,7 @@ function hrUi() { document.querySelectorAll('.hrslot').forEach(el => el.innerHTM
 function hrSample() {
   const a = prof()?.active; if (!a || !HR.bpm) return;
   const t = Math.round((Date.now() - a.start) / 1000), hs = a.hrs || (a.hrs = []), last = hs[hs.length - 1];
-  if (!last || t - last[0] >= 5) { hs.push([t, HR.bpm]); save(); }
+  if (!last || t - last[0] >= HR_STEP) { hs.push([t, HR.bpm]); save(); }
 }
 async function hrConnect() {
   if (!hrSupported()) { ACT.hrMenu(); return; }
@@ -994,7 +1029,7 @@ function hrSummary(samples, hrMax) {
   if (!samples || samples.length < 2) return null;
   const bs = samples.map(s => s[1]), zones = [0, 0, 0, 0, 0, 0];
   for (let i = 0; i < samples.length - 1; i++) {
-    const dt = Math.min(15, samples[i + 1][0] - samples[i][0]);
+    const dt = Math.min(HR_STEP + 5, samples[i + 1][0] - samples[i][0]);
     if (hrMax) { const pct = 100 * samples[i][1] / hrMax; let z = 0; for (let k = 1; k <= 5; k++) if (pct >= ZONES[k][0]) z = k; zones[z] += dt; }
   }
   return { avg: Math.round(bs.reduce((a, b) => a + b, 0) / bs.length), max: Math.max(...bs), zones: hrMax ? zones : null, samples };
@@ -1029,7 +1064,7 @@ function parseTcx(text) {
     const t = Date.parse(txt(tp, 'Time')), hrEl = tp.getElementsByTagName('HeartRateBpm')[0];
     if (isNaN(t) || !hrEl) continue;
     const s = Math.round((t - start) / 1000), b = +txt(hrEl, 'Value');
-    if (b && (!samples.length || s - samples[samples.length - 1][0] >= 5)) samples.push([s, b]);
+    if (b && (!samples.length || s - samples[samples.length - 1][0] >= HR_STEP)) samples.push([s, b]);
   }
   return { sport: act.getAttribute('Sport') || 'Other', id: idTxt, start, sec, km: meters / 1000, samples,
     lapAvg: lapAvg.length ? Math.round(lapAvg.reduce((a, b) => a + b, 0) / lapAvg.length) : null, lapMax: lapMax || null };
@@ -1040,7 +1075,7 @@ function importTcx(text) {
   const run = r.sport === 'Running';
   const name = run ? 'Løpetur' : r.sport === 'Biking' ? 'Sykkeltur' : 'Kondisjonsøkt';
   const wo = { id: uid(), date: r.start, end: r.start + r.sec * 1000, programId: null, dayIdx: null, name, notes: 'Importert fra Garmin', source,
-    exercises: [{ exId: run ? 'run_outdoor' : 'cardio_other', pe: {}, sets: [{ w: Math.round(r.sec / 6) / 10, r: Math.round(r.km * 100) / 100, warm: false, done: true }] }],
+    exercises: [{ exId: run ? 'run_outdoor' : 'cardio_other', sets: [{ w: Math.round(r.sec / 6) / 10, r: Math.round(r.km * 100) / 100, warm: false, done: true }] }],
     hr: hrSummary(r.samples, p.hrMax) || (r.lapAvg ? { avg: r.lapAvg, max: r.lapMax || r.lapAvg, zones: null, samples: [] } : null) };
   p.workouts.push(wo); p.workouts.sort((x, y) => x.date - y.date); saveNow();
   return wo;
@@ -1142,6 +1177,10 @@ function planCompact(pl) {
   }
   return `<div class="plan">${rows.map(r => `<div><span>${r.n > 1 ? r.n + '× ' : ''}${esc(r.base)}</span><span>${fmtDur(r.s)} ${zoneChip(r.z)}</span></div>`).join('')}</div>`;
 }
+// Sikkerhetskopi: økter (alle profiler) som er logget etter siste eksport
+const unsavedWorkouts = () => Object.values(db.profiles).reduce((n, p) => n + p.workouts.filter(w => w.date > (db.lastExport || 0)).length, 0);
+const backupDue = () => { const n = unsavedWorkouts(); return db.lastExport ? n > 0 && Date.now() - db.lastExport > 14 * 864e5 : n >= 5; };
+const backupText = () => db.lastExport ? `Sist eksportert ${fmtDate(db.lastExport)} · ${unsavedWorkouts()} økter siden` : 'Aldri eksportert';
 function weekStrip() {
   const p = prof(), ws = weekStart(Date.now()), today = (new Date().getDay() + 6) % 7;
   const done = new Set(p.workouts.filter(w => w.date >= ws).map(w => (new Date(w.date).getDay() + 6) % 7));
@@ -1157,6 +1196,7 @@ function viewTrain() {
       <button class="btn acc big" data-act="tab" data-t="programs">Velg program</button></div>`;
   } else html += `<div class="sec-title">${progs.length > 1 ? 'Neste økter' : 'Neste økt'}</div>` + progs.map(programCard).join('');
   html += `<button class="btn big" style="margin-top:4px" data-act="startEmpty">${icon('plus', 18)} Start tom økt</button>`;
+  if (backupDue()) html += `<div class="card" style="margin-top:12px"><div class="row"><span class="lic">${icon('download', 20)}</span><div class="grow"><b>Ta en sikkerhetskopi</b><div class="muted small">${backupText()}. Alt ligger bare på denne telefonen.</div></div><button class="btn sm" data-act="export">Eksporter</button></div></div>`;
   const last = p.workouts[p.workouts.length - 1];
   if (last) html += `<div class="sec-title">Forrige økt</div><button class="card li" data-act="openWorkout" data-wid="${last.id}"><div class="grow"><b>${esc(last.name)}</b><div class="muted small">${fmtDate(last.date)} · ${last.exercises.length} øvelser · ${last.exercises.reduce((a, e) => a + e.sets.filter(s => !s.warm).length, 0)} sett</div></div><span class="chev">›</span></button>`;
   return html;
@@ -1210,10 +1250,10 @@ function exCard(e, ei) {
     <div class="setgrid sethead"><span>Sett</span><span>${c1}</span><span>${c2}</span><span></span></div>
     ${e.sets.map((s, si) => { const label = s.warm ? 'O' : String(++n);
       return `<div class="setgrid setrow ${s.done ? 'done' : ''} ${s.warm ? 'warm' : ''}">
-        <button class="setno" data-act="setMenu" data-ei="${ei}" data-si="${si}">${label}</button>
+        <button class="setno" data-act="setMenu" data-ei="${ei}" data-si="${si}" aria-label="Valg for ${s.warm ? 'oppvarmingssett' : 'sett ' + label}">${label}</button>
         <input class="in" inputmode="decimal" enterkeyhint="next" data-set="1" data-ei="${ei}" data-si="${si}" data-f="w" value="${esc(s.w)}" placeholder="${ex.type === 'cardio' ? esc(s.tr || c1) : c1}">
         <input class="in" inputmode="decimal" enterkeyhint="done" data-set="1" data-ei="${ei}" data-si="${si}" data-f="r" value="${esc(s.r)}" placeholder="${ex.type === 'cardio' ? c2 : esc(s.tr || c2)}">
-        <button class="chk" data-act="setDone" data-ei="${ei}" data-si="${si}">✓</button>
+        <button class="chk" data-act="setDone" data-ei="${ei}" data-si="${si}" aria-label="${s.done ? 'Angre' : 'Fullfør'} ${s.warm ? 'oppvarmingssett' : 'sett ' + label}" aria-pressed="${s.done}">✓</button>
         <span></span><div class="plates" id="pl-${ei}-${si}">${esc(plateText(impl, num(s.w)))}</div></div>`; }).join('')}
     <div class="row" style="margin-top:10px"><button class="btn sm" data-act="addSet" data-ei="${ei}">+ Sett</button>
     ${impl.kind !== 'added' && ex.type === 'reps' ? `<button class="btn sm" data-act="warmup" data-ei="${ei}">+ Oppvarming</button>` : ''}</div>
@@ -1346,9 +1386,9 @@ function viewProgress() {
     if (ex.type === 'cardio') cardioMin += e.sets.reduce((a, s) => a + (num(s.w) || 0), 0); else sets += n;
   }
   // Sett per muskel for valgt uke (0 = denne, 1 = forrige). Hjelpemuskler teller et halvt sett.
-  const hw = state.heatWeek || 0, hs = ws - hw * 7 * 864e5;
+  const hw = state.heatWeek || 0, hs = addDays(ws, -7 * hw), he = addDays(hs, 7);
   const mus = Object.fromEntries(MUSCLES.map(m => [m, 0]));
-  for (const w of p.workouts.filter(w => w.date >= hs && w.date < hs + 7 * 864e5)) for (const e of w.exercises) {
+  for (const w of p.workouts.filter(w => w.date >= hs && w.date < he)) for (const e of w.exercises) {
     const ex = EX(e.exId); if (ex.type === 'cardio') continue;
     const n = e.sets.filter(s => !s.warm).length;
     ex.prim.forEach(m => mus[m] += n); ex.sec.forEach(m => mus[m] += n / 2);
@@ -1359,7 +1399,7 @@ function viewProgress() {
   const heat = bodySvg([], [], { labels: true, cls: m => 'mm' + (m ? lvl(mus[m]) : ''), tap: true,
     aria: 'Sett per muskel: ' + MUSCLES.filter(m => mus[m]).map(m => MUS[m] + ' ' + fmt(mus[m])).join(', ') });
   const untrained = MUSCLES.filter(m => !mus[m] && !['forearm', 'obliques', 'adductors'].includes(m)).map(m => MUS[m].toLowerCase());
-  const weeks = Array.from({ length: 8 }, (_, i) => { const s = ws - (7 - i) * 7 * 864e5; return p.workouts.filter(w => w.date >= s && w.date < s + 7 * 864e5).length; });
+  const weeks = Array.from({ length: 8 }, (_, i) => { const s = addDays(ws, -7 * (7 - i)), e = addDays(s, 7); return p.workouts.filter(w => w.date >= s && w.date < e).length; });
   const exIds = [...new Set(p.workouts.flatMap(w => w.exercises.map(e => e.exId)))];
   const exRows = exIds.map(id => { const ex = EX(id), h = history(p, id, 9999); const best = h.reduce((a, x) => Math.max(a, bestOf(x.sets, ex).e), 0); return { ex, last: h[0]?.date || 0, best, n: h.length }; }).sort((a, b) => b.last - a.last);
   const bw = [...p.bw].sort((a, b) => a.date - b.date);
@@ -1376,7 +1416,7 @@ function viewProgress() {
       ${MUSCLES.map(m => `<div class="mbar"><span>${MUS[m]}</span><span class="tr"><i style="width:${100 * mus[m] / maxM}%"></i></span><span class="small" style="text-align:right">${fmt(mus[m])}</span></div>`).join('')}</details></div>
     <div class="sec-title">Øvelser</div>${exRows.length ? `<div class="card list" style="padding:4px 14px">${exRows.map(r => `<button class="li" data-act="openExercise" data-ex="${r.ex.id}"><div class="grow"><div>${esc(r.ex.name)}</div><div class="muted small">${r.n} økter · sist ${fmtDate(r.last)}</div></div>${r.best ? `<div class="small" style="text-align:right"><b>${fmt(Math.round(r.best * 2) / 2)}</b><div class="muted tiny">est. 1RM</div></div>` : ''}<span class="chev">›</span></button>`).join("")}</div>` : '<div class="empty">Fullfør en økt for å se fremgang.</div>'}
     <div class="sec-title">Kroppsvekt</div><div class="card"><div class="row"><input id="bwIn" inputmode="decimal" placeholder="kg" class="grow"><button class="btn acc" data-act="addBw">Lagre</button></div>
-      <div style="margin-top:10px">${bw.length ? lineChart(bw.slice(-30).map(b => ({ x: b.date, y: b.kg })), 'kg') + `<div class="muted small">Sist: ${fmt(bw[bw.length - 1].kg)} kg (${fmtDate(bw[bw.length - 1].date)})</div>` : '<div class="muted small">Ingen registreringer ennå.</div>'}</div></div>
+      <div style="margin-top:10px">${bw.length ? lineChart(bw.slice(-30).map(b => ({ x: b.date, y: b.kg })), 'kg') + `<details style="margin-top:6px"><summary class="small muted" style="cursor:pointer">Sist: ${fmt(bw[bw.length - 1].kg)} kg (${fmtDate(bw[bw.length - 1].date)}) · vis siste</summary><div class="list">${bw.slice(-8).reverse().map(b => `<div class="li small" style="padding:4px 2px"><span class="grow">${fmtDate(b.date)}</span><b>${fmt(b.kg)} kg</b><button class="iconbtn danger" data-act="delBw" data-t="${b.date}" aria-label="Slett">${icon('trash', 18)}</button></div>`).join('')}</div></details>` : '<div class="muted small">Ingen registreringer ennå.</div>'}</div></div>
     <div class="row between"><div class="sec-title">Historikk</div><button class="btn sm ghost addbtn" style="margin:14px 0 0" data-act="tcxHelp">${icon("upload", 18)} Importer fra Garmin</button></div>${p.workouts.length ? `<div class="card list" style="padding:4px 14px">${[...p.workouts].reverse().slice(0, 60).map(w => `<button class="li" data-act="openWorkout" data-wid="${w.id}"><div class="grow"><div>${esc(w.name)}</div><div class="muted small">${fmtDate(w.date)} · ${w.end ? Math.round((w.end - w.date) / 60000) + ' min · ' : ''}${w.source ? "Garmin · " : ""}${w.exercises.length === 1 && EX(w.exercises[0].exId).type === "cardio" && num(w.exercises[0].sets[0]?.r) ? fmt(num(w.exercises[0].sets[0].r)) + " km" : w.exercises.length + " øvelser"}${w.hr ? " · ♥ " + w.hr.avg : ""}</div></div><span class="chev">›</span></button>`).join('')}</div>` : '<div class="empty">Ingen økter ennå.</div>'}`;
 }
 function viewExercise({ exId }) {
@@ -1411,10 +1451,21 @@ function viewLibrary() {
 function viewWorkoutDetail({ wid }) {
   const w = prof().workouts.find(x => x.id === wid);
   if (!w) { state.stack.pop(); return viewProgress(); }
+  // Verdiene kan rettes direkte (skrivefeil), og enkeltsett kan slettes
+  const exCardDone = (e, ei) => {
+    const ex = EX(e.exId), impl = implOf(ex), [c1, c2] = cols(ex, impl); let n = 0;
+    const row = (s, si) => { const f = fld => `data-change="woSet" data-wid="${wid}" data-ei="${ei}" data-si="${si}" data-f="${fld}"`;
+      return `<div class="setgrid setrow ${s.warm ? 'warm' : ''}"><span class="setno" style="display:grid;place-items:center">${s.warm ? 'O' : ++n}</span>
+        <input class="in" inputmode="decimal" ${f('w')} value="${fmtIn(s.w)}" placeholder="${c1}" aria-label="${c1}"><input class="in" inputmode="decimal" ${f('r')} value="${fmtIn(s.r)}" placeholder="${c2}" aria-label="${c2}">
+        <button class="iconbtn danger" data-act="delWoSet" data-wid="${wid}" data-ei="${ei}" data-si="${si}" aria-label="Slett sett">${icon('trash', 18)}</button>
+        ${ex.type === 'cardio' && num(s.r) ? `<span></span><div class="plates">${paceText(num(s.w), num(s.r))}</div>` : ''}</div>`; };
+    return `<div class="card"><button data-act="openExercise" data-ex="${e.exId}" style="text-align:left;padding:0"><h3>${esc(ex.name)} <span class="muted" style="font-weight:400">ⓘ</span></h3></button>
+      <div class="setgrid sethead"><span>Sett</span><span>${c1}</span><span>${c2}</span><span></span></div>${e.sets.map(row).join('')}</div>`;
+  };
   return `${backBtn()}<h1>${esc(w.name)}</h1><div class="muted" style="margin:-8px 0 12px">${fmtDate(w.date)} kl. ${new Date(w.date).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' })}${w.end ? ' · ' + Math.round((w.end - w.date) / 60000) + ' min' : ''}</div>
-    ${w.exercises.map(e => { const ex = EX(e.exId); return `<div class="card"><h3>${esc(ex.name)}</h3>${e.sets.map((s, i) => `<div class="row small" style="padding:3px 0"><span class="muted" style="width:26px">${s.warm ? 'O' : ''}</span><span>${ex.type === 'cardio' ? fmt(num(s.w)) + ' min' + (num(s.r) ? ' · ' + fmt(num(s.r)) + ' km · ' + paceText(num(s.w), num(s.r)) : '') : (num(s.w) ? fmt(num(s.w)) + ' kg × ' : '') + fmt(num(s.r)) + (ex.type === 'time' ? ' s' : '')}</span></div>`).join('')}</div>`; }).join('')}
+    ${w.exercises.map(exCardDone).join('')}
     ${hrCard(w.hr, w.date)}
-    ${w.notes ? `<div class="card"><h3>Notater</h3>${esc(w.notes)}</div>` : ''}
+    <div class="card"><label class="f" style="margin-top:0">Notater</label><textarea data-change="woNotesDone" data-wid="${wid}" placeholder="Hvordan føltes det?">${esc(w.notes || '')}</textarea></div>
     <button class="btn danger big" data-act="delWorkout" data-wid="${wid}">Slett økt</button>`;
 }
 
@@ -1445,6 +1496,7 @@ function viewMore() {
       <div class="setrow2"><span>Tema</span><select data-change="setting" data-f="theme">${[['dark', 'Mørkt'], ['light', 'Lyst'], ['auto', 'Som telefonen']].map(([v, l]) => `<option value="${v}" ${s.theme === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div></div>
     <div class="sec-title">Sikkerhetskopi</div>
     <div class="card"><p class="muted small" style="margin-top:0">Alt lagres bare på denne telefonen. Ta en eksport av og til og lagre den i Filer, Google Drive eller e-post.</p>
+      <p class="small" style="margin-top:-6px"><b>${backupText()}</b></p>
       <div class="row"><button class="btn grow" data-act="export">${icon('download', 18)} Eksporter</button><button class="btn grow" data-act="import">${icon('upload', 18)} Importer</button></div></div>
     <p class="muted tiny" style="text-align:center;margin-top:18px">Garasjegym · data lagret lokalt på telefonen</p>`;
 }
@@ -1508,13 +1560,15 @@ const ACT = {
   // Økt
   setDone: d => {
     const a = P().active, e = a.exercises[+d.ei], s = e.sets[+d.si];
-    const kind = implOf(EX(e.exId)).kind;
-    if (!s.done && num(s.w) == null && EX(e.exId).type === 'reps' && kind !== 'added') { flash('Skriv inn vekt først'); return; }
+    const kind = implOf(EX(e.exId)).kind, type = EX(e.exId).type;
+    const focus = f => { const inp = document.querySelector(`input[data-set][data-ei="${d.ei}"][data-si="${d.si}"][data-f="${f}"]`); inp?.focus(); inp?.select?.(); };
+    if (!s.done && num(s.w) == null && type === 'reps' && kind !== 'added') { flash('Skriv inn vekt først'); focus('w'); return; }
+    // Forslaget i feltet er et mål, ikke et resultat: reps må skrives inn før settet kan hukes av
+    if (!s.done && type !== 'cardio' && num(s.r) == null) { flash(type === 'time' ? 'Skriv inn sekunder først' : 'Skriv inn reps først'); focus('r'); return; }
     s.done = !s.done;
     if (s.done) {
-      if (EX(e.exId).type === 'cardio') { if (s.w === '' && s.tr) s.w = s.tr; }
-      else if (s.r === '' && s.tr) s.r = String(parseInt(s.tr) || '');
-      if (s.w === '' && implOf(EX(e.exId)).kind === 'added') s.w = '0';
+      if (type === 'cardio' && s.w === '' && s.tr) s.w = s.tr;
+      if (s.w === '' && kind === 'added') s.w = '0';
       const ex = EX(e.exId);
       const grp = e.pe.ss ? a.exercises.map((y, i) => y.pe.ss === e.pe.ss ? i : -1).filter(i => i >= 0) : [];
       const pos = grp.indexOf(+d.ei);
@@ -1581,7 +1635,8 @@ const ACT = {
   cancelWo: () => { if (confirm('Forkaste hele økta? Det som er logget blir ikke lagret.')) { P().active = null; releaseWake(); save(); } closeSheet(); render(); },
   finish: () => {
     const p = P(), a = p.active;
-    const exs = a.exercises.map(e => ({ exId: e.exId, pe: e.pe, sets: e.sets.filter(s => s.done).map(s => ({ w: num(s.w), r: num(s.r), warm: !!s.warm, done: true })) })).filter(e => e.sets.length);
+    // Bare det som trengs i historikken lagres (ikke programoppsettet), så localStorage ikke fylles opp
+    const exs = a.exercises.map(e => ({ exId: e.exId, sets: e.sets.filter(s => s.done).map(s => ({ w: num(s.w), r: num(s.r), warm: !!s.warm, done: true })) })).filter(e => e.sets.length);
     if (!exs.length) { if (confirm('Ingen sett er huket av. Forkaste økta?')) { p.active = null; releaseWake(); save(); render(); } return; }
     const undone = a.exercises.reduce((n, e) => n + e.sets.filter(s => !s.done && !s.warm).length, 0);
     if (undone && !confirm(`${undone} sett er ikke huket av og blir ikke lagret. Fullføre likevel?`)) return;
@@ -1680,7 +1735,14 @@ const ACT = {
   // Fremgang
   openExercise: d => { closeSheet(); push({ type: 'exercise', exId: d.ex }); },
   delWorkout: d => { if (!confirm('Slette økta permanent?')) return; const p = P(); p.workouts = p.workouts.filter(w => w.id !== d.wid); save(); back(); },
+  delWoSet: d => {
+    const w = P().workouts.find(x => x.id === d.wid), e = w?.exercises[+d.ei]; if (!e) return;
+    e.sets.splice(+d.si, 1);
+    if (!e.sets.length) w.exercises.splice(+d.ei, 1);
+    save(); render();
+  },
   addBw: () => { const v = num($('#bwIn').value); if (!v) return; P().bw.push({ date: Date.now(), kg: v }); save(); render(); flash('Kroppsvekt lagret'); },
+  delBw: d => { const p = P(); p.bw = p.bw.filter(b => b.date !== +d.t); save(); render(); },
   // Mer
   switchProfile: d => { if (P().active && d.id !== db.current) flash('Økta til ' + P().name + ' er lagret og venter'); db.current = d.id; save(); go('train'); },
   addProfile: () => { const n = prompt('Navn på ny profil'); if (!n) return; const p = newProfile(n); db.profiles[p.id] = p; db.current = p.id; save(); go('train'); },
@@ -1696,22 +1758,25 @@ const ACT = {
   saveCustomEx: () => {
     const name = $('#ceName').value.trim(); if (!name) { flash('Skriv inn et navn'); return; }
     const ex = E('c_' + uid(), name, $('#ceImpl').value, $('#cePat').value, [$('#ceMus').value], [], { type: $('#ceType').value });
-    (db.settings.customEx = db.settings.customEx || []).push(ex); save();
+    (db.settings.customEx = db.settings.customEx || []).push(ex); exMap = null; save();
     if (state.picker) { ACT.pickEx({ id: ex.id }); return; }
     closeSheet(); render();
   },
-  delCustomEx: d => { if (!confirm('Slette øvelsen? Historikken beholdes, men vises som ukjent.')) return; db.settings.customEx = db.settings.customEx.filter(e => e.id !== d.id); save(); render(); },
+  delCustomEx: d => { if (!confirm('Slette øvelsen? Historikken beholdes, men vises som ukjent.')) return; db.settings.customEx = db.settings.customEx.filter(e => e.id !== d.id); exMap = null; save(); render(); },
   export: async () => {
     saveNow();
     const name = `garasjegym-${new Date().toISOString().slice(0, 10)}.json`;
     const file = new File([JSON.stringify(db)], name, { type: 'application/json' });
-    if (navigator.canShare?.({ files: [file] })) { try { await navigator.share({ files: [file], title: 'Garasjegym backup' }); return; } catch (e) { if (e.name === 'AbortError') return; } }
-    const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    const done = () => { db.lastExport = Date.now(); save(); render(); };
+    if (navigator.canShare?.({ files: [file] })) { try { await navigator.share({ files: [file], title: 'Garasjegym backup' }); done(); return; } catch (e) { if (e.name === 'AbortError') return; } }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); done();
   },
   import: () => $('#importFile').click(),
 };
 const CHANGE = {
   woNotes: (d, el) => { P().active.notes = el.value; save(); },
+  woNotesDone: (d, el) => { const w = P().workouts.find(x => x.id === d.wid); if (w) { w.notes = el.value; save(); } },
+  woSet: (d, el) => { const s = P().workouts.find(x => x.id === d.wid)?.exercises[+d.ei]?.sets[+d.si]; if (!s) return; s[d.f] = num(el.value); el.value = fmtIn(s[d.f]); save(); },
   progField: (d, el) => { progById(d.pid)[d.f] = el.value; save(); },
   dayName: (d, el) => { progById(d.pid).days[+d.d].name = el.value || 'Dag'; save(); },
   peField: (d, el) => {
@@ -1771,9 +1836,13 @@ $('#importFile').addEventListener('change', async e => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return;
   try {
     const data = JSON.parse(await f.text());
-    if (!data.profiles || !data.settings) throw new Error('Ikke en Garasjegym-fil');
+    const bad = validateDb(data); if (bad) throw new Error(bad);
     if (!confirm('Erstatte ALT på denne telefonen med innholdet i filen?')) return;
-    localStorage.setItem(KEY, JSON.stringify(data)); load(); plateCache = {}; go('train'); flash('Importert');
+    // Det som lå her fra før beholdes til filen er lest inn uten feil
+    const prev = localStorage.getItem(KEY);
+    try { localStorage.setItem(KEY, JSON.stringify(data)); load(); }
+    catch (err) { if (prev != null) localStorage.setItem(KEY, prev); load(); throw new Error('Filen lot seg ikke lese inn, det gamle innholdet er beholdt. (' + err.message + ')'); }
+    plateCache = {}; go('train'); flash('Importert');
   } catch (err) { alert('Kunne ikke importere: ' + err.message); }
 });
 
@@ -1812,6 +1881,7 @@ render();
 requestWake();
 navigator.storage?.persist?.();
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => { if (db.settings.theme === 'auto') render(); });
 </script>
 </body>
 </html>
