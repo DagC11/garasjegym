@@ -223,6 +223,27 @@ svg.chart text { fill:var(--muted); font-size:11px; }
 </head>
 <body>
 <div id="app"></div>
+<script>
+// Nødskjerm hvis appen ikke starter (f.eks. en gammel fil i cachen etter oppdatering).
+// Vanlig skript, ikke modul, så den virker selv om modulen feiler. Knappen tømmer cache og laster på nytt.
+(function () {
+  var shown = false;
+  function show(msg) {
+    if (shown || document.getElementById('app').children.length) return; shown = true;
+    document.getElementById('app').innerHTML = '<div style="padding:40px 20px;text-align:center;font-family:sans-serif"><h2>Appen fikk ikke startet</h2>' +
+      '<p style="color:#8e99a6">' + (msg ? String(msg).replace(/[<>&]/g, '') : 'Prøv å laste på nytt.') + '</p>' +
+      '<button id="ggFix" style="font:inherit;font-size:18px;padding:14px 22px;border-radius:12px;border:0;background:#ff7a1a;color:#1a0d00;font-weight:700">Rydd opp og last på nytt</button>' +
+      '<p style="color:#8e99a6;font-size:13px;margin-top:16px">Treningsdataene dine ligger trygt lagret på telefonen og røres ikke.</p></div>';
+    document.getElementById('ggFix').onclick = async function () {
+      try { if (navigator.serviceWorker) for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); } catch (e) {}
+      try { if (window.caches) for (const k of await caches.keys()) await caches.delete(k); } catch (e) {}
+      location.reload();
+    };
+  }
+  window.addEventListener('error', function (e) { if (!document.getElementById('app').children.length) show(e.message); });
+  setTimeout(function () { show(''); }, 4000);
+})();
+</script>
 <div id="timer"></div>
 <div id="focus" role="dialog" aria-label="Intervalltimer"></div>
 <div id="sheet"><div class="bd" data-act="closeSheet"></div><div class="pane"><div class="grabzone"><div class="grab"></div><button class="sheetx" data-act="closeSheet" aria-label="Lukk">×</button></div><div id="sheetBody"></div></div></div>
@@ -916,7 +937,7 @@ function viewProgress() {
     <div class="muted small" style="margin-bottom:4px">Kilometer per uke</div><div class="row" style="align-items:flex-end;gap:6px;height:70px">${kmWeeks.map((n, i) => `<div class="grow" style="text-align:center"><div style="height:${Math.max(4, Math.min(56, n * 56 / Math.max(1, ...kmWeeks)))}px;background:${i === 7 ? 'var(--acc)' : 'var(--card2)'};border-radius:5px"></div><div class="tiny muted">${fmt(n)}</div></div>`).join('')}</div>
     ${zoneTot ? `<div class="muted small" style="margin:12px 0 4px">Tid i pulssone denne uka</div>${[5, 4, 3, 2, 1].map(z => `<div class="mbar"><span><span class="zone z${z}">Sone ${z}</span></span><span class="tr"><i style="width:${100 * zonesWeek[z] / zoneTot}%;background:var(--z${z})"></i></span><span class="small" style="text-align:right">${Math.round(zonesWeek[z] / 60)}m</span></div>`).join('')}` : ''}
     ${paceRuns.length >= 2 ? `<div class="muted small" style="margin:12px 0 4px">Tempo per tur (lavere er raskere)</div>${lineChart(paceRuns, 'min/km')}` : ''}
-    ${paceRuns.length ? `<div class="muted small" style="margin-top:6px">Sist: ${fmtDur(paceRuns.at(-1).y * 60)} /km over ${fmt(paceRuns.at(-1).km)} km</div>` : ''}</div>`;
+    ${paceRuns.length ? `<div class="muted small" style="margin-top:6px">Sist: ${fmtDur(paceRuns[paceRuns.length - 1].y * 60)} /km over ${fmt(paceRuns[paceRuns.length - 1].km)} km</div>` : ''}</div>`;
   return `<div class="pagehead"><h1>Fremgang</h1></div>
     <div class="row" style="gap:8px"><div class="stat"><span class="muted small">Økter i uka</span><b>${thisWeek.length}</b></div><div class="stat"><span class="muted small">Sett</span><b>${sets}</b></div><div class="stat"><span class="muted small">Kondisjon</span><b>${fmt(cardioMin)} min</b></div></div>
     <div class="card" style="margin-top:12px"><h3>Økter per uke</h3><div class="row" style="align-items:flex-end;gap:6px;height:70px">${weeks.map((n, i) => `<div class="grow" style="text-align:center"><div style="height:${Math.max(4, n * 14)}px;background:${i === 7 ? 'var(--acc)' : 'var(--card2)'};border-radius:5px"></div><div class="tiny muted">${n}</div></div>`).join('')}</div><div class="muted tiny">Siste 8 uker</div></div>
@@ -1444,7 +1465,17 @@ load();
 render();
 requestWake();
 navigator.storage?.persist?.();
-if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    // Se etter ny versjon hver gang appen hentes fram igjen
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update().catch(() => {}); });
+  }).catch(() => {});
+  // Ny versjon er installert: last på nytt med en gang hvis ingen økt pågår, ellers ved neste anledning
+  navigator.serviceWorker.addEventListener('message', e => {
+    if (e.data?.type !== 'updated') return;
+    if (!prof()?.active) { saveNow(); location.reload(); } else flash('Ny versjon er klar – lastes når økta er ferdig');
+  });
+}
 matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => { if (db.settings.theme === 'auto') render(); });
 </script>
 </body>
