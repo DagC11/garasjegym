@@ -1470,9 +1470,11 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     // Se etter ny versjon hver gang appen hentes fram igjen
     document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update().catch(() => {}); });
   }).catch(() => {});
-  // Ny versjon er installert: last på nytt med en gang hvis ingen økt pågår, ellers ved neste anledning
+  // Ny versjon er installert: last på nytt med en gang hvis ingen økt pågår, ellers ved neste anledning.
+  // Ved aller første installasjon (ingen controller fra før) kjører siden allerede nyeste versjon.
+  const hadSw = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener('message', e => {
-    if (e.data?.type !== 'updated') return;
+    if (e.data?.type !== 'updated' || !hadSw) return;
     if (!prof()?.active) { saveNow(); location.reload(); } else flash('Ny versjon er klar – lastes når økta er ferdig');
   });
 }
