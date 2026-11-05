@@ -1,0 +1,10 @@
+{
+  "name": "garasjegym",
+  "private": true,
+  "type": "module",
+  "description": "Treningslogg for garasjegymmen (PWA uten byggesteg)",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "start": "python3 -m http.server 8080"
+  }
+}

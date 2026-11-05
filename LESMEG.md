@@ -6,9 +6,14 @@ En treningslogg for garasjegymmen, laget som en web-app (PWA). Samme app virker 
 
 | Fil | Hva |
 |---|---|
-| `index.html` | Hele appen |
+| `index.html` | Skjermene, handlingene og lagringen |
+| `logic.js` | Ren logikk: skiveberegning, vektforslag, rekorder, pulssoner |
+| `data.js` | Utstyr, øvelsesbibliotek, muskelkart og programmaler |
 | `manifest.webmanifest`, `icon-*.png` | Navn og ikon på hjemskjermen |
 | `sw.js` | Gjør at appen virker uten nett |
+| `test/`, `package.json` | Enhetstester for logikken (`npm test`, trenger bare Node) |
+
+Appen bruker ES-moduler og må åpnes via en nettadresse (ikke dobbeltklikk på `index.html`). Lokalt: `npm start` og åpne `http://localhost:8080`.
 
 ## Få appen over på telefonene
 
@@ -38,6 +43,7 @@ Adressen er offentlig, men ingen treningsdata ligger der. Dataene lagres bare p�
 ## Under økta
 
 - Et sett hukes av med ✓ etter at vekt og reps er skrevet inn. Tallet som ligger i feltet fra før er et *mål* (forslag), ikke et resultat.
+- Trykk på settnummeret for å notere **RIR** (reps igjen i tanken) eller markere settet som oppvarming. RIR lagres med økta og gir et hint i vektforslaget neste gang.
 - Hviletimeren er basert på klokkeslett og tåler at du bytter app, men lyd og vibrasjon kommer bare mens appen er åpen på skjermen. Skjermen holdes våken så lenge en økt er i gang.
 - Skrivefeil kan rettes etterpå: åpne økta under **Fremgang → Historikk** og endre tallene, eller slett et sett.
 
