@@ -18,6 +18,17 @@ export const paceText = (min, km) => min > 0 && km > 0 ? fmtDur(min * 60 / km) +
 /* ---------- Pulssoner (Olympiatoppens intensitetsskala, % av makspuls) ---------- */
 export const ZONES = { 1: [55, 72, 'Veldig rolig – du kan synge'], 2: [72, 82, 'Rolig – du kan prate i hele setninger'], 3: [82, 87, 'Moderat – bare korte setninger'], 4: [87, 92, 'Hardt – bare enkeltord'], 5: [92, 100, 'Svært hardt'] };
 export const HR_STEP = 15; // sekunder mellom lagrede pulsprøver (en times økt = 240 prøver)
+// Teoretisk makspuls fra alder (Nes m.fl., NTNU/HUNT 2013): 211 − 0,64 × alder
+export const estHrMax = age => age > 0 ? Math.round(211 - 0.64 * age) : null;
+// Makspuls som brukes for profilen: målt hvis satt, ellers anslått fra fødselsår. { max, est: true|false }
+export function hrMaxOf(p, year = new Date().getFullYear()) {
+  if (!p) return { max: null, est: false };
+  if (p.hrMax) return { max: p.hrMax, est: false };
+  const m = p.birthYear ? estHrMax(year - p.birthYear) : null;
+  return { max: m, est: !!m };
+}
+// Slag/min-intervall for en sone («2» eller «1-2») ved gitt makspuls
+export const zoneBpm = (z, hrMax) => { if (!hrMax) return ''; const [a, b] = String(z).split('-').map(Number); return `${Math.round(hrMax * ZONES[a][0] / 100)}–${Math.round(hrMax * ZONES[b || a][1] / 100)}`; };
 export function hrZone(bpm, hrMax) {
   if (!hrMax || !bpm) return 0;
   const pct = 100 * bpm / hrMax;
@@ -229,6 +240,34 @@ export function estMinutes(list, EX) {
     } else sec += x.sets * (45 + (x.rest || 0));
   });
   return Math.round(sec / 60);
+}
+
+/* ---------- Intervallplaner ---------- */
+// En plan lagres flatt: [{ t, s, z, alt? }]. Gjentatte faser heter «Drag 1/4», «Pause 1/4», «Drag 2/4» …
+// Blokker er redigeringsformen: [{ n: 1, segs: [seg] }] for enkeltfaser og [{ n: 4, segs: [drag, pause] }] for gjentak.
+const SUF = / (\d+)\/(\d+)$/;
+export function planToBlocks(plan) {
+  const blocks = []; let i = 0;
+  while (i < (plan || []).length) {
+    const m = plan[i].t.match(SUF);
+    if (!m || +m[1] !== 1) { blocks.push({ n: 1, segs: [{ ...plan[i] }] }); i++; continue; }
+    const n = +m[2], segs = [];
+    let j = i;
+    while (j < plan.length && plan[j].t.endsWith(' 1/' + n)) { segs.push({ ...plan[j], t: plan[j].t.replace(SUF, '') }); j++; }
+    const period = segs.length, total = period * n;
+    const ok = j - i === period && i + total <= plan.length && plan.slice(i, i + total).every((s, k) => s.t === segs[k % period].t + ' ' + (Math.floor(k / period) + 1) + '/' + n);
+    if (!ok) { blocks.push({ n: 1, segs: [{ ...plan[i] }] }); i++; continue; }
+    blocks.push({ n, segs }); i += total;
+  }
+  return blocks;
+}
+export function blocksToPlan(blocks) {
+  const out = [];
+  for (const b of blocks) {
+    if (b.n <= 1 || b.segs.length === 0) { for (const s of b.segs) out.push({ ...s }); continue; }
+    for (let r = 1; r <= b.n; r++) for (const s of b.segs) out.push({ ...s, t: s.t + ' ' + r + '/' + b.n });
+  }
+  return out;
 }
 
 /* ---------- Lagringsformat ---------- */

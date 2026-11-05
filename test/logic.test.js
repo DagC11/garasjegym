@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { plateTable, options, roundW, nextUp, platesFor, plateText, warmupSets, e1rm, history, suggest, bestOf, computePRs,
   setsSummary, ssLabels, estMinutes, hrSummary, hrZone, zoneInfo, validateDb, addDays, weekStart, num, fmtDur, paceText } from '../logic.js';
+import * as L from '../logic.js';
 import { DEFAULT_PLATES, DEFAULT_IMPL, BUILTIN } from '../data.js';
 
 const PL = DEFAULT_PLATES;
@@ -113,6 +114,27 @@ test('datoer: ukestart og kalenderdager over sommertid', () => {
   assert.equal(weekStart(new Date('2026-11-04T12:00:00+01:00').getTime()), mon);
   assert.equal(new Date(addDays(mon, -14)).getHours(), 0);   // 19. okt 00:00, ikke 01:00
   assert.equal(addDays(mon, -14) - new Date('2026-10-19T00:00:00+02:00').getTime(), 0);
+});
+test('intervallplan: flat ↔ blokker', () => {
+  const { planToBlocks, blocksToPlan } = L;
+  const plan = [{ t: 'Oppvarming', s: 600, z: '1-2' }, { t: 'Drag 1/2', s: 240, z: '4' }, { t: 'Pause 1/2', s: 180, z: '2' }, { t: 'Drag 2/2', s: 240, z: '4' }, { t: 'Pause 2/2', s: 180, z: '2' }, { t: 'Ned', s: 300, z: '1' }];
+  const bl = planToBlocks(plan);
+  assert.deepEqual(bl.map(b => [b.n, b.segs.map(s => s.t)]), [[1, ['Oppvarming']], [2, ['Drag', 'Pause']], [1, ['Ned']]]);
+  assert.deepEqual(blocksToPlan(bl), plan);
+  bl[1].n = 3; bl[1].segs[0].s = 180;
+  const out = blocksToPlan(bl);
+  assert.equal(out.length, 8); assert.equal(out[5].t, 'Drag 3/3'); assert.equal(out[5].s, 180);
+  // Ufullstendig gjentak behandles som enkeltfaser, ingenting går tapt
+  const odd = [{ t: 'Drag 1/3', s: 60, z: '4' }, { t: 'Drag 2/3', s: 60, z: '4' }];
+  assert.deepEqual(blocksToPlan(planToBlocks(odd)), odd);
+  assert.deepEqual(planToBlocks([]), []);
+});
+test('makspuls: målt, anslått fra fødselsår, og sone i slag/min', () => {
+  assert.equal(L.estHrMax(35), 189);
+  assert.deepEqual(L.hrMaxOf({ hrMax: 192, birthYear: 1990 }, 2026), { max: 192, est: false });
+  assert.deepEqual(L.hrMaxOf({ hrMax: null, birthYear: 1988 }, 2026), { max: 187, est: true });
+  assert.deepEqual(L.hrMaxOf({}, 2026), { max: null, est: false });
+  assert.equal(L.zoneBpm('2', 190), '137–156'); assert.equal(L.zoneBpm('1-2', 190), '105–156'); assert.equal(L.zoneBpm('2', null), '');
 });
 test('småhjelpere', () => {
   assert.equal(num('62,5'), 62.5); assert.equal(num(''), null); assert.equal(num('x'), null);

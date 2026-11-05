@@ -139,6 +139,28 @@ svg.body .mm.p { fill:var(--acc); } svg.body .mm.s { fill:var(--m-sec); } svg.bo
 .card.ss { border-left:4px solid var(--warm); }
 .sslabel { font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--warm); }
 .cue { font-size:14px; color:var(--muted); font-style:italic; margin-top:6px; }
+.cue.clamp { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; cursor:pointer; }
+.cue.clamp::after { content:' … mer'; }
+.cardio-in { display:grid; grid-template-columns:1fr 1fr 54px; gap:8px; align-items:end; margin-top:6px; }
+.cardio-in label { font-size:11px; color:var(--muted); display:block; margin-bottom:2px; text-transform:uppercase; letter-spacing:.05em; }
+.cardio-in .in { text-align:center; font-size:20px; font-weight:600; min-height:50px; padding:6px; }
+.cardio-in.done .chk { background:var(--ok); border-color:var(--ok); color:#fff; } .cardio-in.done .in { background:var(--ok-soft); border-color:transparent; }
+.pblock { padding:6px 0 2px; border-top:1px dashed var(--line); }
+.pblock.rep { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:8px; margin:6px 0; }
+.segrow { display:grid; grid-template-columns:1fr 56px 74px 36px; gap:6px; align-items:center; margin:4px 0; }
+.segrow input, .segrow select { min-height:40px; padding:6px 8px; } .segrow input[inputmode] { text-align:center; }
+.pebody .pblock.rep input, .pebody .pblock.rep select { background:var(--card2); }
+/* Fokusmodus for intervalltimer */
+#focus { position:fixed; inset:0; z-index:28; background:var(--bg); display:none; flex-direction:column; padding:calc(env(safe-area-inset-top) + 16px) 20px calc(env(safe-area-inset-bottom) + 20px); text-align:center; }
+#focus .ft { font-size:96px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1; margin:18px 0 8px; }
+#focus .fp { font-size:30px; font-weight:800; }
+#focus .fz { font-size:18px; margin-top:6px; } #focus .fz .zone { font-size:16px; padding:3px 10px; }
+#focus .fh { font-size:22px; margin-top:14px; min-height:28px; }
+#focus .fx { color:var(--muted); font-size:16px; margin-top:auto; }
+#focus .bar { height:8px; background:var(--card2); border-radius:4px; overflow:hidden; margin:14px 0; } #focus .bar i { display:block; height:100%; background:var(--acc); }
+#focus .btn { font-size:17px; min-height:52px; }
+.zrow { display:grid; grid-template-columns:62px 72px 1fr; gap:8px; align-items:start; padding:7px 0; border-top:1px solid var(--line); font-size:14px; }
+.zrow .zone { min-width:0; }
 .plan { font-size:14px; margin:8px 0; } .plan div { display:flex; justify-content:space-between; gap:8px; padding:3px 0; border-bottom:1px dashed var(--line); }
 .zone { display:inline-block; min-width:52px; text-align:center; font-size:12px; font-weight:700; border-radius:6px; padding:1px 6px; color:#fff; }
 .z1 { background:#5b8def; } .z2 { background:#2fa865; } .z3 { background:#d9a521; } .z4 { background:#e5702a; } .z5 { background:#d63b3b; }
@@ -194,13 +216,15 @@ body.noscroll { overflow:hidden; }
 .pick[hidden] { display:none; }
 svg.chart text { fill:var(--muted); font-size:11px; }
 .empty { text-align:center; padding:28px 10px; color:var(--muted); }
-.flash { position:fixed; top:calc(env(safe-area-inset-top) + 12px); left:50%; transform:translateX(-50%); z-index:40; background:var(--text); color:var(--bg);
+/* Nederst, over fanelinja og en eventuell timer, så den ikke dekker overskriften */
+.flash { position:fixed; bottom:calc(env(safe-area-inset-bottom) + 78px + var(--timer-h, 0px)); left:50%; transform:translateX(-50%); z-index:40; background:var(--text); color:var(--bg);
   padding:10px 16px; border-radius:12px; font-weight:600; font-size:14px; max-width:90%; }
 </style>
 </head>
 <body>
 <div id="app"></div>
 <div id="timer"></div>
+<div id="focus" role="dialog" aria-label="Intervalltimer"></div>
 <div id="sheet"><div class="bd" data-act="closeSheet"></div><div class="pane"><div class="grabzone"><div class="grab"></div><button class="sheetx" data-act="closeSheet" aria-label="Lukk">×</button></div><div id="sheetBody"></div></div></div>
 <input type="file" id="importFile" accept="application/json,.json" hidden>
 <input type="file" id="tcxFile" accept=".tcx,application/vnd.garmin.tcx+xml,application/xml,text/xml" hidden>
@@ -321,9 +345,18 @@ const warmupSets = (impl, W) => L.warmupSets(impl, W, PLATES());
 const suggest = (pex, ex, p) => L.suggest(pex, ex, implOf(ex), history(p, ex.id, 3), PLATES());
 const computePRs = (p, wo) => L.computePRs(p, wo, EX);
 const estMinutes = list => L.estMinutes(list, EX);
-const zoneInfo = z => L.zoneInfo(z, prof()?.hrMax);
+const hrMax = () => L.hrMaxOf(prof()).max;   // målt eller anslått fra fødselsår
+const zoneInfo = z => L.zoneInfo(z, hrMax());
 const zoneChip = z => { const i = zoneInfo(z); return `<span class="zone ${i.cls}">${i.label}</span>`; };
-const hrZone = bpm => L.hrZone(bpm, prof()?.hrMax);
+const zoneBpm = z => { const b = L.zoneBpm(z, hrMax()); return b ? `<span class="muted tiny" style="margin-left:4px">${b}</span>` : ''; };
+const hrZone = bpm => L.hrZone(bpm, hrMax());
+// Tabell over Olympiatoppens intensitetssoner, i slag/min når makspuls finnes
+function zoneTable() {
+  const { max, est } = L.hrMaxOf(prof());
+  const use = { 1: 'Restitusjon, oppvarming, lange rolige turer', 2: 'Grunntrening – her bør det meste av løpinga ligge', 3: 'Terskel – langtur med trykk, lange drag', 4: 'Harde intervaller, f.eks. 4×4', 5: 'Korte, svært harde drag' };
+  return `<div class="muted small" style="margin-bottom:6px">${max ? `${est ? 'Anslått' : 'Målt'} makspuls ${max}.` : 'Legg inn makspuls eller fødselsår under Mer for å få slag/min.'} Olympiatoppens skala, % av makspuls. Grensene er de samme uansett treningsnivå – det er fordelingen som er forskjellig.</div>
+    ${[1, 2, 3, 4, 5].map(z => { const i = L.zoneInfo(z, max); return `<div class="zrow"><span class="zone z${z}">Sone ${z}</span><b>${max ? L.zoneBpm(z, max) : i.pct}</b><span class="muted small">${max ? i.pct + ' · ' : ''}${i.desc}<br>${use[z]}</span></div>`; }).join('')}`;
+}
 
 /* ---------- Skjermlås, lyd ---------- */
 let wakeLock = null;
@@ -349,7 +382,11 @@ function beep() { tone([880, 880, 1320]); try { navigator.vibrate?.([200, 100, 2
 // Skjelettet byttes bare når modus endres; ellers oppdateres kun tekst, slik at knappene ikke byttes ut midt i et trykk.
 let readyUntil = 0, timerMode = '';
 function startRest(sec) { const a = prof().active; if (!a) return; a.restEnd = Date.now() + sec * 1000; a.restTotal = sec; a.restBeeped = false; save(); tick(); }
-function setTimerMode(el, mode, html) { if (timerMode !== mode) { timerMode = mode; el.innerHTML = html; } el.style.display = mode ? 'block' : 'none'; el.classList.toggle('ready', mode === 'ready'); document.body.classList.toggle('hastimer', !!mode); }
+function setTimerMode(el, mode, html) {
+  if (timerMode !== mode) { timerMode = mode; el.innerHTML = html; }
+  el.style.display = mode ? 'block' : 'none'; el.classList.toggle('ready', mode === 'ready'); document.body.classList.toggle('hastimer', !!mode);
+  document.body.style.setProperty('--timer-h', mode ? el.offsetHeight + 8 + 'px' : '0px');
+}
 const T = id => document.getElementById(id);
 function ivState(a) {
   const iv = a.iv, plan = a.exercises[iv.ei]?.pe.plan || [];
@@ -383,7 +420,7 @@ function tickInterval(el, a) {
     const e = a.exercises[iv.ei];
     if (e) { const s = e.sets[0]; if (s) { s.w = String(Math.round(planSec(st.plan) / 60)); s.done = true; } }
     a.iv = null; save(); tone([880, 1100, 1320, 1760], 0.2, 0.25); try { navigator.vibrate?.([300, 100, 300, 100, 300]); } catch {}
-    render(); flash('Økta er ferdig! Legg inn km hvis du vil.'); return;
+    focusOff(); render(); flash('Økta er ferdig! Legg inn km hvis du vil.'); return;
   }
   const ph = st.plan[st.i], nx = st.plan[st.i + 1], z = zoneInfo(ph.z);
   if (iv.lastIdx !== st.i) { if (iv.lastIdx != null) { beep(); } iv.lastIdx = st.i; iv.warned = false; save(); }
@@ -393,16 +430,29 @@ function tickInterval(el, a) {
     <div class="row" style="margin-top:4px"><div class="grow"><div class="ivphase" id="iP"></div><div class="small" id="iZ"></div></div><div class="t" id="iT"></div></div>
     <div class="small" id="iH" style="margin-top:6px"></div>
     <div class="muted small" id="iX" style="margin-top:4px"></div><div class="bar"><i id="iB"></i></div>
-    <div class="row" style="margin-top:10px"><button class="btn sm grow" data-act="ivPause">${iv.pausedAt ? '▶ Fortsett' : '⏸ Pause'}</button><button class="btn sm grow" data-act="ivSkip">⏭ Neste fase</button><button class="btn sm danger" data-act="ivStop">Stopp</button></div></div>`);
-  T('iN').textContent = `Fase ${st.i + 1} av ${st.plan.length}${iv.pausedAt ? ' · PAUSE' : ''}`;
-  T('iTot').textContent = `Totalt ${fmtDur(st.el)} / ${fmtDur(planSec(st.plan))}`;
-  T('iP').textContent = ph.t;
-  T('iZ').innerHTML = `<span class="zone ${z.cls}">${z.label}</span> ${esc(z.bpm || z.pct + ' av makspuls')} · ${esc(z.desc)}`;
-  T('iT').textContent = fmtDur(st.left);
-  T('iX').textContent = nx ? `Neste: ${nx.t} · ${fmtDur(nx.s)} · ${zoneInfo(nx.z).label}` : 'Siste fase';
-  T('iB').style.width = (100 * (1 - st.left / ph.s)) + '%';
-  const ih = T('iH'); if (ih) ih.innerHTML = hrVsZone(ph.z);
+    <div class="row" style="margin-top:10px"><button class="btn sm grow" data-act="ivPause">${iv.pausedAt ? '▶ Fortsett' : '⏸ Pause'}</button><button class="btn sm grow" data-act="ivSkip">⏭ Neste fase</button><button class="btn sm" data-act="focusOn" aria-label="Fullskjerm">⤢</button><button class="btn sm danger" data-act="ivStop">Stopp</button></div></div>`);
+  // Fokusmodus: samme tall i stort format over hele skjermen (mølla står et stykke unna)
+  const fo = $('#focus'), paused = !!iv.pausedAt;
+  if (state.focus && (fo.style.display !== 'flex' || fo.dataset.paused !== String(paused))) {
+    fo.dataset.paused = String(paused);
+    fo.innerHTML = `<div class="row between"><span class="muted" id="fN"></span><span class="muted" id="fTot"></span></div>
+      <div class="ft" id="fT"></div><div class="fp" id="fP"></div><div class="fz" id="fZ"></div><div class="fh" id="fH"></div>
+      <div class="fx" id="fX"></div><div class="bar"><i id="fB"></i></div>
+      <div class="row" style="gap:8px"><button class="btn grow" data-act="ivPause">${paused ? '▶ Fortsett' : '⏸ Pause'}</button><button class="btn grow" data-act="ivSkip">⏭ Neste</button><button class="btn danger" data-act="ivStop">Stopp</button></div>
+      <button class="btn ghost" style="margin-top:8px" data-act="focusOff">Lukk fullskjerm</button>`;
+    fo.style.display = 'flex';
+  } else if (!state.focus && fo.style.display !== 'none') fo.style.display = 'none';
+  const set = (id, fid, v, html) => { const a = T(id), b = state.focus ? T(fid) : null; for (const el of [a, b]) if (el) { if (html) el.innerHTML = v; else el.textContent = v; } };
+  set('iN', 'fN', `Fase ${st.i + 1} av ${st.plan.length}${paused ? ' · PAUSE' : ''}`);
+  set('iTot', 'fTot', `Totalt ${fmtDur(st.el)} / ${fmtDur(planSec(st.plan))}`);
+  set('iP', 'fP', ph.t);
+  set('iZ', 'fZ', `<span class="zone ${z.cls}">${z.label}</span> ${esc(z.bpm || z.pct + ' av makspuls')} · ${esc(z.desc)}`, true);
+  set('iT', 'fT', fmtDur(st.left));
+  set('iX', 'fX', nx ? `Neste: ${nx.t} · ${fmtDur(nx.s)} · ${zoneInfo(nx.z).label}` : 'Siste fase');
+  const w = (100 * (1 - st.left / ph.s)) + '%'; T('iB').style.width = w; if (state.focus && T('fB')) T('fB').style.width = w;
+  set('iH', 'fH', hrVsZone(ph.z), true);
 }
+function focusOff() { state.focus = false; const fo = $('#focus'); fo.style.display = 'none'; fo.innerHTML = ''; }
 setInterval(tick, 250);
 
 /* ---------- Pulsmåler over Bluetooth (f.eks. Garmin med «Kringkast puls») ---------- */
@@ -420,8 +470,8 @@ function hrPill() {
 // Sammenligner pulsen nå med sonen i fasen (z kan være «2» eller «1-2»)
 function hrVsZone(z) {
   if (!hrLive()) return '';
-  const max = prof()?.hrMax;
-  if (!max) return `${icon('heart', 16)} <b>${HR.bpm}</b> slag/min · <span class="muted">sett makspuls under Mer for å se sonen</span>`;
+  const max = hrMax();
+  if (!max) return `${icon('heart', 16)} <b>${HR.bpm}</b> slag/min · <span class="muted">sett makspuls eller fødselsår under Mer for å se sonen</span>`;
   const [a, b] = String(z).split('-').map(Number), lo = max * ZONES[a][0] / 100, hi = max * ZONES[b || a][1] / 100;
   const st = HR.bpm < lo ? ['low', 'Øk farten'] : HR.bpm > hi ? ['high', 'Ro ned'] : ['ok', 'I sonen ✓'];
   return `${icon('heart', 16)} <b>${HR.bpm}</b> slag/min · <span class="hrst ${st[0]}">${st[1]}</span>`;
@@ -507,7 +557,7 @@ function importTcx(text) {
   const name = run ? 'Løpetur' : r.sport === 'Biking' ? 'Sykkeltur' : 'Kondisjonsøkt';
   const wo = { id: uid(), date: r.start, end: r.start + r.sec * 1000, programId: null, dayIdx: null, name, notes: 'Importert fra Garmin', source,
     exercises: [{ exId: run ? 'run_outdoor' : 'cardio_other', sets: [{ w: Math.round(r.sec / 6) / 10, r: Math.round(r.km * 100) / 100, warm: false, done: true }] }],
-    hr: hrSummary(r.samples, p.hrMax) || (r.lapAvg ? { avg: r.lapAvg, max: r.lapMax || r.lapAvg, zones: null, samples: [] } : null) };
+    hr: hrSummary(r.samples, hrMax()) || (r.lapAvg ? { avg: r.lapAvg, max: r.lapMax || r.lapAvg, zones: null, samples: [] } : null) };
   p.workouts.push(wo); p.workouts.sort((x, y) => x.date - y.date); saveNow();
   return wo;
 }
@@ -535,8 +585,15 @@ const icon = (n, s = 22) => `<svg class="ico" width="${s}" height="${s}" viewBox
 /* ---------- Navigasjon og tilstand ---------- */
 const state = { tab: 'train', stack: [], picker: null, plateImpl: 'barbell', plateW: '100' };
 function go(tab) { state.tab = tab; state.stack = []; render(); window.scrollTo(0, 0); }
-function push(view) { state.stack.push(view); render(); window.scrollTo(0, 0); }
+// Hver undervisning og hvert ark legges i nettleserhistorikken, så Android-tilbakeknappen går tilbake i appen
+// i stedet for å lukke den. Programmatisk tilbake rører ikke historikken; overflødige oppføringer er ufarlige.
+function push(view) { state.stack.push(view); try { window.history.pushState({ gg: 'view' }, ''); } catch {} render(); window.scrollTo(0, 0); }
 function back() { state.stack.pop(); render(); window.scrollTo(0, 0); }
+window.addEventListener('popstate', () => {
+  if (state.focus) return focusOff();
+  if ($('#sheet').style.display === 'block') return closeSheet();
+  if (state.stack.length) { state.stack.pop(); render(); window.scrollTo(0, 0); }
+});
 const backBtn = () => `<button class="btn ghost sm" data-act="back" style="padding-left:0">‹ Tilbake</button>`;
 
 function render() {
@@ -554,7 +611,16 @@ function render() {
 const activePrograms = () => { const p = prof(); return p.activeIds.map(id => p.programs.find(x => x.id === id)).filter(Boolean); };
 function planSummary(pl) {
   if (!pl?.length) return '';
-  return `<div class="plan">${pl.map(s => `<div><span>${esc(s.t)}</span><span>${fmtDur(s.s)} ${zoneChip(s.z)}</span></div>`).join('')}</div>`;
+  return `<div class="plan">${pl.map(s => `<div><span>${esc(s.t)}</span><span>${fmtDur(s.s)} ${zoneChip(s.z)}${zoneBpm(s.z)}</span></div>`).join('')}</div>`;
+}
+// Varighetsvalg for jevne økter (uten gjentatte faser): den lengste fasen kan justeres før start
+function durationRow(x, ei) {
+  const pl = x.plan || []; if (pl.length < 1 || pl.some(s => / \d+\/\d+$/.test(s.t))) return '';
+  let mi = 0; pl.forEach((s, i) => { if (s.s > pl[mi].s) mi = i; });
+  const m = Math.round(pl[mi].s / 60), tot = Math.round(planSec(pl) / 60);
+  return `<div class="row wrap" style="margin:8px 0;gap:6px"><span class="muted small grow">${esc(pl[mi].t)}: <b>${m} min</b> (totalt ${tot})</span>
+    <button class="chip" data-act="ivDur" data-ei="${ei}" data-i="${mi}" data-d="-5" aria-label="5 minutter kortere">−5</button><button class="chip" data-act="ivDur" data-ei="${ei}" data-i="${mi}" data-d="5" aria-label="5 minutter lengre">+5</button></div>
+    <div class="hscroll" style="margin-bottom:8px">${[20, 30, 40, 45, 60, 75, 90].map(v => `<button class="chip ${v === m ? 'on' : ''}" data-act="ivDur" data-ei="${ei}" data-i="${mi}" data-m="${v}">${v} min</button>`).join('')}</div>`;
 }
 function programCard(prog) {
   const p = prof();
@@ -582,7 +648,7 @@ function planCompact(pl) {
     const hit = rows.find(r => r.base === base && r.s === s.s && r.z === s.z && base !== s.t);
     if (hit) hit.n++; else rows.push({ base, s: s.s, z: s.z, n: 1 });
   }
-  return `<div class="plan">${rows.map(r => `<div><span>${r.n > 1 ? r.n + '× ' : ''}${esc(r.base)}</span><span>${fmtDur(r.s)} ${zoneChip(r.z)}</span></div>`).join('')}</div>`;
+  return `<div class="plan">${rows.map(r => `<div><span>${r.n > 1 ? r.n + '× ' : ''}${esc(r.base)}</span><span>${fmtDur(r.s)} ${zoneChip(r.z)}${zoneBpm(r.z)}</span></div>`).join('')}</div>`;
 }
 // Sikkerhetskopi: økter (alle profiler) som er logget etter siste eksport
 const unsavedWorkouts = () => Object.values(db.profiles).reduce((n, p) => n + p.workouts.filter(w => w.date > (db.lastExport || 0)).length, 0);
@@ -651,12 +717,12 @@ function exCard(e, ei) {
     ${lab ? `<div class="sslabel">Supersett ${esc(x.ss)} · ${lab.slice(1)} av ${grp.length}</div>` : ''}
     <div class="row"><div class="grow"><button data-act="openExercise" data-ex="${e.exId}" style="text-align:left;padding:0"><h3 style="margin:0">${esc(ex.name)} <span class="muted" style="font-weight:400">ⓘ</span></h3></button><div class="muted small">${lab && lab.slice(1) != grp.length ? esc(tgt.replace(/ · hvile .*$/, '')) + ' · ' + esc(impl.name) + ' · rett videre til neste' : esc(tgt) + (ex.type !== 'cardio' ? ' · ' + esc(impl.name) : '')}</div></div>
     <button class="iconbtn" data-act="exMenu" data-ei="${ei}">⋯</button></div>
-    ${x.note ? `<div class="cue">${esc(x.note)}</div>` : ''}
+    ${x.note ? (x.note.length > 90 ? `<div class="cue clamp" data-act="cueToggle">${esc(x.note)}</div>` : `<div class="cue">${esc(x.note)}</div>`) : ''}
     ${e.note ? `<div class="note ${e.tone}">${esc(e.note)}</div>` : ''}
     ${altsFor(e.exId).length && !e.sets.some(s => s.done) ? `<div class="row wrap" style="margin:8px 0"><span class="muted small">Bytt til:</span>${altsFor(e.exId).map(id => `<button class="chip" data-act="altEx" data-ei="${ei}" data-id="${id}">${esc(EX(id).name)}</button>`).join('')}</div>` : ''}
     ${(() => { const alt = x.plan?.find(s => s.alt); return alt && !ivOn ? `<div class="row wrap" style="margin:8px 0"><span class="muted small">Velg sone for ${esc(alt.t.toLowerCase())}:</span>${alt.alt.map(z => `<button class="chip ${alt.z === z ? 'on' : ''}" data-act="ivZone" data-ei="${ei}" data-z="${z}">Sone ${z}</button>`).join('')}</div>` : ''; })()}
-    ${x.plan?.length ? planSummary(x.plan) + (ivOn ? '' :`<button class="btn acc big" style="margin-bottom:10px" data-act="ivStart" data-ei="${ei}">▶ Start intervalltimer (${Math.round(planSec(x.plan) / 60)} min)</button>`) : ''}
-    <div class="setgrid sethead"><span>Sett</span><span>${c1}</span><span>${c2}</span><span></span></div>
+    ${x.plan?.length ? (ivOn ? '' : durationRow(x, ei)) + planSummary(x.plan) + (ivOn ? '' :`<button class="btn acc big" style="margin-bottom:10px" data-act="ivStart" data-ei="${ei}">▶ Start intervalltimer (${Math.round(planSec(x.plan) / 60)} min)</button>`) : ''}
+    ${ex.type === 'cardio' ? cardioInputs(e, ei) : `<div class="setgrid sethead"><span>Sett</span><span>${c1}</span><span>${c2}</span><span></span></div>
     ${e.sets.map((s, si) => { const label = s.warm ? 'O' : String(++n);
       return `<div class="setgrid setrow ${s.done ? 'done' : ''} ${s.warm ? 'warm' : ''}">
         <button class="setno" data-act="setMenu" data-ei="${ei}" data-si="${si}" aria-label="Valg for ${s.warm ? 'oppvarmingssett' : 'sett ' + label}">${label}</button>
@@ -665,11 +731,20 @@ function exCard(e, ei) {
         <button class="chk" data-act="setDone" data-ei="${ei}" data-si="${si}" aria-label="${s.done ? 'Angre' : 'Fullfør'} ${s.warm ? 'oppvarmingssett' : 'sett ' + label}" aria-pressed="${s.done}">✓</button>
         <span></span><div class="plates" id="pl-${ei}-${si}">${esc(setSub(impl, s))}</div></div>`; }).join('')}
     <div class="row" style="margin-top:10px"><button class="btn sm" data-act="addSet" data-ei="${ei}">+ Sett</button>
-    ${impl.kind !== 'added' && ex.type === 'reps' ? `<button class="btn sm" data-act="warmup" data-ei="${ei}">+ Oppvarming</button>` : ''}</div>
+    ${impl.kind !== 'added' && ex.type === 'reps' ? `<button class="btn sm" data-act="warmup" data-ei="${ei}">+ Oppvarming</button>` : ''}</div>`}
   </div>`;
 }
+// Kondisjon: ett felt-par (minutter, km) med tempo, i stedet for sett-rutenettet
+function cardioInputs(e, ei) {
+  const s = e.sets[0] || (e.sets[0] = { w: '', r: '', tr: '', done: false, warm: false });
+  return `<div class="cardio-in ${s.done ? 'done' : ''}"><div><label>Minutter</label><input class="in" inputmode="decimal" enterkeyhint="next" data-set="1" data-ei="${ei}" data-si="0" data-f="w" value="${esc(s.w)}" placeholder="${esc(s.tr || 'min')}"></div>
+    <div><label>Kilometer</label><input class="in" inputmode="decimal" enterkeyhint="done" data-set="1" data-ei="${ei}" data-si="0" data-f="r" value="${esc(s.r)}" placeholder="km"></div>
+    <button class="chk" data-act="setDone" data-ei="${ei}" data-si="0" aria-label="${s.done ? 'Angre' : 'Fullfør'} økta" aria-pressed="${s.done}">✓</button></div>
+    <div class="muted small" id="pace-${ei}" style="min-height:18px;margin-top:4px">${paceLine(s)}</div>`;
+}
+const paceLine = s => { const p = paceText(num(s.w), num(s.r)); return p ? 'Tempo ' + p + (num(s.w) && num(s.r) ? ' · ' + fmt(Math.round(num(s.r) / num(s.w) * 600) / 10) + ' km/t' : '') : ''; };
 /* ---------- Ark (bunnark) ---------- */
-function sheet(html) { $('#sheetBody').innerHTML = html; const pn = $('#sheet .pane'); pn.style.transition = ''; pn.style.transform = ''; pn.scrollTop = 0; $('#sheet').style.display = 'block'; document.body.classList.add('noscroll'); }
+function sheet(html) { if ($('#sheet').style.display !== 'block') { try { window.history.pushState({ gg: 'sheet' }, ''); } catch {} } $('#sheetBody').innerHTML = html; const pn = $('#sheet .pane'); pn.style.transition = ''; pn.style.transform = ''; pn.scrollTop = 0; $('#sheet').style.display = 'block'; document.body.classList.add('noscroll'); }
 function closeSheet() { $('#sheet').style.display = 'none'; $('#sheetBody').innerHTML = ''; state.picker = null; state.dialog = null; document.body.classList.remove('noscroll'); }
 // Spørsmål og beskjeder som bunnark i stedet for confirm()/prompt()/alert().
 // o = { title, text?, ok?, cancel?, danger?, input?: { value?, placeholder?, numeric? }, onOk(value) }
@@ -722,6 +797,25 @@ function viewPrograms() {
     ${rest.length ? `<div class="sec-title">Andre program</div>${rest.map(card).join('')}` : ''}
     ${!p.programs.length ? '<div class="empty">Ingen program ennå. Trykk «Nytt» for å lage et eller hente fra biblioteket.</div>' : ''}`;
 }
+// Redigering av intervallplan: enkeltfaser og gjentatte bolker (4 × [Drag 4:00, Pause 3:00])
+const ZONE_OPTS = ['1', '1-2', '2', '2-3', '3', '4', '5'];
+function planEditor(pid, di, i, plan) {
+  const blocks = L.planToBlocks(plan || []);
+  const A = (act, extra) => `data-act="${act}" data-pid="${pid}" data-d="${di}" data-i="${i}" ${extra}`;
+  const F = (b, s, f) => `data-change="planField" data-pid="${pid}" data-d="${di}" data-i="${i}" data-b="${b}" data-s="${s}" data-f="${f}"`;
+  const segRow = (b, s, seg) => `<div class="segrow"><input ${F(b, s, 't')} value="${esc(seg.t)}" aria-label="Navn på fasen">
+      <input inputmode="numeric" ${F(b, s, 'm')} value="${Math.round(seg.s / 60)}" aria-label="Minutter"><select ${F(b, s, 'z')} aria-label="Sone">${ZONE_OPTS.map(z => `<option value="${z}" ${seg.z === z ? 'selected' : ''}>S${z.replace('-', '–')}</option>`).join('')}</select>
+      <button class="iconbtn danger" ${A('planDelSeg', `data-b="${b}" data-s="${s}"`)} aria-label="Fjern fase">${icon('trash', 18)}</button></div>`;
+  return `<div class="muted small" style="margin:4px 0 2px">Faser: navn · minutter · sone</div>
+    ${blocks.map((bl, b) => `<div class="pblock ${bl.n > 1 ? 'rep' : ''}">
+      ${bl.n > 1 ? `<div class="row small" style="gap:6px;margin-bottom:4px"><span class="muted">Gjenta</span><input inputmode="numeric" ${F(b, 0, 'n')} value="${bl.n}" style="width:54px;min-height:36px;padding:4px;text-align:center" aria-label="Antall gjentak"><span class="muted">×</span><span class="grow"></span>
+        <button class="iconbtn" ${A('planMove', `data-b="${b}" data-dir="-1"`)} aria-label="Flytt opp">↑</button><button class="iconbtn" ${A('planMove', `data-b="${b}" data-dir="1"`)} aria-label="Flytt ned">↓</button></div>` : ''}
+      ${bl.segs.map((seg, s) => segRow(b, s, seg)).join('')}
+      ${bl.n > 1 ? `<button class="btn sm ghost addbtn" ${A('planAddSeg', `data-b="${b}"`)}>${icon('plus', 16)} Fase i bolken</button>`
+        : `<div class="row" style="justify-content:flex-end;gap:2px;margin-top:-4px"><button class="iconbtn" ${A('planMove', `data-b="${b}" data-dir="-1"`)} aria-label="Flytt opp">↑</button><button class="iconbtn" ${A('planMove', `data-b="${b}" data-dir="1"`)} aria-label="Flytt ned">↓</button></div>`}
+    </div>`).join('')}
+    <div class="row" style="gap:6px;margin-top:6px"><button class="btn sm" ${A('planAdd', 'data-kind="seg"')}>+ Fase</button><button class="btn sm" ${A('planAdd', 'data-kind="rep"')}>+ Intervallbolk</button><span class="grow"></span><span class="muted small">Totalt ${Math.round(planSec(plan) / 60)} min</span></div>`;
+}
 function viewProgramEdit({ pid }) {
   const pr = prof().programs.find(x => x.id === pid);
   if (!pr) { state.stack.pop(); return viewPrograms(); }
@@ -736,7 +830,7 @@ function viewProgramEdit({ pid }) {
     return `<div class="perow ${open ? 'open' : ''}">
       <button class="pesum" data-act="peToggle" data-k="${key}"><span class="sslabel">${lab || ''}</span><span class="grow"><b>${esc(ex.name)}</b><span class="muted small">${sum}</span></span><span class="chev">${open ? '⌃' : '⌄'}</span></button>
       ${!open ? '' : `<div class="pebody">
-        ${ex.type === 'cardio' ? planSummary(x.plan) : `<div class="pe-grid">
+        ${ex.type === 'cardio' ? planEditor(pid, di, i, x.plan) : `<div class="pe-grid">
           ${[['sets', 'Sett'], ['min', ex.type === 'time' ? 'Min sek' : 'Min reps'], ['max', ex.type === 'time' ? 'Maks sek' : 'Maks reps'], ['rest', 'Hvile (s)']].map(([k, l]) => `<div><label>${l}</label><input inputmode="numeric" ${f(di, i, k)} value="${x[k] ?? ''}"></div>`).join('')}
           <div style="grid-column:span 2"><label>Progresjon</label><select ${f(di, i, 'rule')}>${rules.map(([v, l]) => `<option value="${v}" ${x.rule === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
           <div><label>Økning kg</label><input inputmode="decimal" ${f(di, i, 'inc')} value="${fmtIn(x.inc)}" placeholder="auto"></div>
@@ -809,11 +903,24 @@ function viewProgress() {
   const untrained = MUSCLES.filter(m => !mus[m] && !['forearm', 'obliques', 'adductors'].includes(m)).map(m => MUS[m].toLowerCase());
   const weeks = Array.from({ length: 8 }, (_, i) => { const s = addDays(ws, -7 * (7 - i)), e = addDays(s, 7); return p.workouts.filter(w => w.date >= s && w.date < e).length; });
   const exIds = [...new Set(p.workouts.flatMap(w => w.exercises.map(e => e.exId)))];
-  const exRows = exIds.map(id => { const ex = EX(id), h = history(p, id, 9999); const best = h.reduce((a, x) => Math.max(a, bestOf(x.sets, ex).e), 0); return { ex, last: h[0]?.date || 0, best, n: h.length }; }).sort((a, b) => b.last - a.last);
+  const exRows = exIds.map(id => { const ex = EX(id), h = history(p, id, 9999); const best = ex.type !== 'reps' ? 0 : h.reduce((a, x) => Math.max(a, bestOf(x.sets, ex).e), 0); return { ex, last: h[0]?.date || 0, best, n: h.length }; }).sort((a, b) => b.last - a.last);
   const bw = [...p.bw].sort((a, b) => a.date - b.date);
+  // Kondisjon: km per uke, tid i sone denne uka, og tempoutvikling på turer med både tid og distanse
+  const cardioOf = w => w.exercises.filter(e => EX(e.exId).type === 'cardio').flatMap(e => e.sets);
+  const kmWeeks = Array.from({ length: 8 }, (_, i) => { const s = addDays(ws, -7 * (7 - i)), e = addDays(s, 7); return Math.round(p.workouts.filter(w => w.date >= s && w.date < e).reduce((a, w) => a + cardioOf(w).reduce((b, x) => b + (num(x.r) || 0), 0), 0) * 10) / 10; });
+  const zonesWeek = thisWeek.reduce((acc, w) => { (w.hr?.zones || []).forEach((v, z) => acc[z] += v); return acc; }, [0, 0, 0, 0, 0, 0]);
+  const zoneTot = zonesWeek.reduce((a, b) => a + b, 0);
+  const paceRuns = p.workouts.map(w => { const s = cardioOf(w).filter(x => num(x.w) > 0 && num(x.r) >= 1); if (!s.length) return null; const min = s.reduce((a, x) => a + num(x.w), 0), km = s.reduce((a, x) => a + num(x.r), 0); return { x: w.date, y: Math.round(min / km * 100) / 100, km }; }).filter(Boolean).slice(-30);
+  const hasCardio = kmWeeks.some(Boolean) || zoneTot > 0 || paceRuns.length > 0;
+  const cardioCard = !hasCardio ? '' : `<div class="card"><h3>Kondisjon</h3>
+    <div class="muted small" style="margin-bottom:4px">Kilometer per uke</div><div class="row" style="align-items:flex-end;gap:6px;height:70px">${kmWeeks.map((n, i) => `<div class="grow" style="text-align:center"><div style="height:${Math.max(4, Math.min(56, n * 56 / Math.max(1, ...kmWeeks)))}px;background:${i === 7 ? 'var(--acc)' : 'var(--card2)'};border-radius:5px"></div><div class="tiny muted">${fmt(n)}</div></div>`).join('')}</div>
+    ${zoneTot ? `<div class="muted small" style="margin:12px 0 4px">Tid i pulssone denne uka</div>${[5, 4, 3, 2, 1].map(z => `<div class="mbar"><span><span class="zone z${z}">Sone ${z}</span></span><span class="tr"><i style="width:${100 * zonesWeek[z] / zoneTot}%;background:var(--z${z})"></i></span><span class="small" style="text-align:right">${Math.round(zonesWeek[z] / 60)}m</span></div>`).join('')}` : ''}
+    ${paceRuns.length >= 2 ? `<div class="muted small" style="margin:12px 0 4px">Tempo per tur (lavere er raskere)</div>${lineChart(paceRuns, 'min/km')}` : ''}
+    ${paceRuns.length ? `<div class="muted small" style="margin-top:6px">Sist: ${fmtDur(paceRuns.at(-1).y * 60)} /km over ${fmt(paceRuns.at(-1).km)} km</div>` : ''}</div>`;
   return `<div class="pagehead"><h1>Fremgang</h1></div>
     <div class="row" style="gap:8px"><div class="stat"><span class="muted small">Økter i uka</span><b>${thisWeek.length}</b></div><div class="stat"><span class="muted small">Sett</span><b>${sets}</b></div><div class="stat"><span class="muted small">Kondisjon</span><b>${fmt(cardioMin)} min</b></div></div>
     <div class="card" style="margin-top:12px"><h3>Økter per uke</h3><div class="row" style="align-items:flex-end;gap:6px;height:70px">${weeks.map((n, i) => `<div class="grow" style="text-align:center"><div style="height:${Math.max(4, n * 14)}px;background:${i === 7 ? 'var(--acc)' : 'var(--card2)'};border-radius:5px"></div><div class="tiny muted">${n}</div></div>`).join('')}</div><div class="muted tiny">Siste 8 uker</div></div>
+    ${cardioCard}
     <div class="card"><div class="row between"><h3 style="margin:0">Muskler trent</h3>
         <div class="row" style="gap:6px"><button class="chip ${hw === 0 ? 'on' : ''}" data-act="heatWeek" data-w="0">Denne uka</button><button class="chip ${hw === 1 ? 'on' : ''}" data-act="heatWeek" data-w="1">Forrige</button></div></div>
       <div style="margin-top:10px">${heat}</div>
@@ -884,8 +991,10 @@ function viewMore() {
   return `<div class="pagehead"><h1>Mer</h1></div>
     <div class="sec-title">Profil</div>
     <div class="card"><label class="f" style="margin-top:0">Navn</label><input data-change="profName" value="${esc(p.name)}">
-      <label class="f">Makspuls (valgfritt, slag/min)</label><input inputmode="numeric" data-change="hrMax" value="${p.hrMax || ''}" placeholder="190">
-      <div class="muted tiny" style="margin-top:4px">Brukes til pulssoner på kondisjon. Anslag: 211 − 0,64 × alder (NTNU), f.eks. 35 år ≈ 189.</div>
+      <div class="pe-grid" style="grid-template-columns:1fr 1fr;margin-top:10px"><div><label>Fødselsår</label><input inputmode="numeric" data-change="birthYear" value="${p.birthYear || ''}" placeholder="1990" style="text-align:left"></div>
+        <div><label>Målt makspuls</label><input inputmode="numeric" data-change="hrMax" value="${p.hrMax || ''}" placeholder="${L.hrMaxOf(p).est ? 'anslått ' + L.hrMaxOf(p).max : 'valgfritt'}" style="text-align:left"></div></div>
+      <div class="muted tiny" style="margin-top:4px">${(() => { const h = L.hrMaxOf(p); return h.max ? `Pulssonene regnes fra <b>${h.max} slag/min</b> (${h.est ? 'anslått: 211 − 0,64 × alder, NTNU/HUNT. Har du målt høyere på en hard økt, skriv inn det.' : 'målt'}).` : 'Legg inn fødselsår for et anslag på makspuls (211 − 0,64 × alder), eller skriv inn målt verdi.'; })()}</div>
+      <details style="margin-top:8px"><summary class="small" style="cursor:pointer">Vis pulssonene</summary><div style="margin-top:8px">${zoneTable()}</div></details>
       ${Object.values(db.profiles).length > 1 ? `<label class="f">Bytt profil</label><div class="hscroll">${Object.values(db.profiles).map(x => `<button class="chip ${x.id === p.id ? 'on' : ''}" data-act="switchProfile" data-id="${x.id}">${esc(x.name)}</button>`).join('')}</div>` : ''}
       <button class="btn sm ghost addbtn" style="margin-top:8px" data-act="addProfile">${icon('plus', 18)} Ny profil på denne telefonen</button></div>
     <div class="sec-title">Verktøy og utstyr</div>
@@ -1006,6 +1115,7 @@ const ACT = {
       <div class="list"><button class="li" data-act="toggleWarm" data-ei="${d.ei}" data-si="${d.si}">${s.warm ? 'Gjør til arbeidssett' : 'Marker som oppvarming'}</button>
       <button class="li" data-act="delSet" data-ei="${d.ei}" data-si="${d.si}" style="color:var(--bad)">Slett sett</button></div>`);
   },
+  cueToggle: (d, el) => el.classList.toggle('clamp'),
   setRir: d => { const s = P().active.exercises[+d.ei].sets[+d.si]; s.rir = s.rir === +d.v ? null : +d.v; closeSheet(); save(); render(); },
   toggleWarm: d => { const s = P().active.exercises[+d.ei].sets[+d.si]; s.warm = !s.warm; closeSheet(); save(); render(); },
   delSet: d => { P().active.exercises[+d.ei].sets.splice(+d.si, 1); closeSheet(); save(); render(); },
@@ -1060,7 +1170,7 @@ const ACT = {
     if (!Array.isArray(exs)) return;
     const p = P(), a = p.active;
     const wo = { id: a.id, date: a.start, end: Date.now(), programId: a.programId, dayIdx: a.dayIdx, name: a.name, notes: a.notes || '', exercises: exs };
-    const hrS = hrSummary(a.hrs, p.hrMax); if (hrS) wo.hr = hrS;
+    const hrS = hrSummary(a.hrs, hrMax()); if (hrS) wo.hr = hrS;
     const prs = computePRs(p, wo);
     p.workouts.push(wo); p.workouts.sort((x, y) => x.date - y.date);
     const prog = a.programId && progById(a.programId);
@@ -1087,6 +1197,16 @@ const ACT = {
     pd?.ex.forEach(x => (x.plan || []).forEach(s => { if (s.alt) s.z = d.z; }));
     save(); render();
   },
+  // Endre varighet på en fase før start; huskes i programmet
+  ivDur: d => {
+    const a = P().active, e = a.exercises[+d.ei], i = +d.i, ph = e.pe.plan?.[i]; if (!ph) return;
+    const m = d.m ? +d.m : Math.max(5, Math.round(ph.s / 60) + +d.d);
+    ph.s = m * 60;
+    const pd = a.programId && progById(a.programId)?.days[a.dayIdx];
+    const px = pd?.ex.find(x => x.exId === e.exId && x.plan?.[i]?.t === ph.t); if (px) px.plan[i].s = m * 60;
+    e.sets[0].tr = String(Math.round(planSec(e.pe.plan) / 60));
+    save(); render();
+  },
   ivStart: d => { const a = P().active; a.iv = { ei: +d.ei, start: Date.now(), pausedAt: null, pausedMs: 0, lastIdx: null }; a.restEnd = null; save(); render(); requestWake(); },
   ivPause: () => { const iv = P().active?.iv; if (!iv) return; if (iv.pausedAt) { iv.pausedMs += Date.now() - iv.pausedAt; iv.pausedAt = null; } else iv.pausedAt = Date.now(); save(); tick(); },
   ivSkip: () => { const a = P().active; if (!a?.iv) return; const st = ivState(a); a.iv.start -= st.left * 1000 + 10; save(); tick(); },
@@ -1095,16 +1215,18 @@ const ACT = {
     ask({ title: 'Stoppe intervalltimeren?', ok: 'Stopp', danger: true, onOk: () => {
       const st = ivState(a), s = a.exercises[a.iv.ei]?.sets[0];
       if (s && st.el > 60) { s.w = String(Math.round(st.el / 60)); }
-      a.iv = null; save(); render();
+      a.iv = null; focusOff(); save(); render();
     } });
   },
+  focusOn: () => { state.focus = true; try { window.history.pushState({ gg: 'focus' }, ''); } catch {} requestWake(); tick(); },
+  focusOff: () => focusOff(),
   timerAdd: d => { const a = P().active; if (a?.restEnd) { a.restEnd += +d.s * 1000; a.restTotal = Math.max(1, (a.restTotal || 0) + +d.s); save(); tick(); } },
   timerStop: () => { const a = P().active; if (a) { a.restEnd = null; save(); } readyUntil = 0; tick(); },
   // Program
   hrMenu: () => {
     if (!hrSupported()) return sheet(`<h3>Pulsmåler</h3><p>Denne nettleseren kan ikke koble til Bluetooth-pulsmålere.</p>
       <p class="muted small">Det virker i Chrome på Android. Apple tillater ikke Bluetooth fra nettapper i Safari på iPhone. Løpeturer fra klokka kan likevel importeres med «Importer fra Garmin».</p>
-      <button class="btn big" data-act="tcxHelp">Importer fra Garmin</button>`);
+      <button class="btn big" data-act="tcxHelp">Importer fra Garmin</button><h3 style="margin-top:18px">Pulssoner</h3>${zoneTable()}`);
     if (hrLive() || HR.status === 'kobler') return sheet(`<h3>Pulsmåler</h3><p>${HR.status === 'kobler' ? 'Kobler til …' : `Tilkoblet <b>${esc(HR.name)}</b> · ${HR.bpm} slag/min`}</p>
       <p class="muted small">Pulsen lagres sammen med økta. Snitt, maks og tid i hver sone vises når økta er fullført.</p>
       <button class="btn big danger" data-act="hrOff">Koble fra</button>`);
@@ -1113,7 +1235,7 @@ const ACT = {
         <li>Hold inne <b>OPP</b>-knappen, velg aktivitetsinnstillinger og slå på <b>Kringkast puls</b>.</li>
         <li>Trykk <b>Koble til</b> under og velg klokka i lista.</li></ol>
       <p class="muted small">Pulsmålere med Bluetooth, f.eks. Garmin HRM-Dual, virker også. Kringkasting bruker litt mer batteri på klokka.</p>
-      <button class="btn acc big" data-act="hrOn">${icon('heart', 18)} Koble til</button>`);
+      <button class="btn acc big" data-act="hrOn">${icon('heart', 18)} Koble til</button><h3 style="margin-top:18px">Pulssoner</h3>${zoneTable()}`);
   },
   hrOn: () => { closeSheet(); hrConnect(); },
   hrOff: () => { closeSheet(); hrDisconnect(); flash('Pulsmåler frakoblet'); render(); },
@@ -1152,6 +1274,13 @@ const ACT = {
   addPe: d => openPicker('prog', { pid: d.pid, d: +d.d }),
   progSwap: d => openPicker('progSwap', { pid: d.pid, d: +d.d, i: +d.i }),
   movePe: d => { const l = progById(d.pid).days[+d.d].ex, i = +d.i, j = i + +d.dir; if (j >= 0 && j < l.length) state.peOpen = `${d.pid}:${d.d}:${j}`; if (j >= 0 && j < l.length) [l[i], l[j]] = [l[j], l[i]]; save(); render(); },
+  // Intervallplan i programredigering (jobber på blokker, lagrer flatt)
+  planAdd: d => { const x = progById(d.pid).days[+d.d].ex[+d.i], bl = L.planToBlocks(x.plan || []);
+    bl.push(d.kind === 'rep' ? { n: 4, segs: [{ t: 'Drag', s: 240, z: '4' }, { t: 'Pause', s: 180, z: '2' }] } : { n: 1, segs: [{ t: 'Fase', s: 300, z: '2' }] });
+    x.plan = L.blocksToPlan(bl); save(); render(); },
+  planAddSeg: d => { const x = progById(d.pid).days[+d.d].ex[+d.i], bl = L.planToBlocks(x.plan || []); bl[+d.b]?.segs.push({ t: 'Fase', s: 60, z: '2' }); x.plan = L.blocksToPlan(bl); save(); render(); },
+  planDelSeg: d => { const x = progById(d.pid).days[+d.d].ex[+d.i], bl = L.planToBlocks(x.plan || []); bl[+d.b]?.segs.splice(+d.s, 1); x.plan = L.blocksToPlan(bl.filter(b => b.segs.length)); save(); render(); },
+  planMove: d => { const x = progById(d.pid).days[+d.d].ex[+d.i], bl = L.planToBlocks(x.plan || []), i = +d.b, j = i + +d.dir; if (j < 0 || j >= bl.length) return; [bl[i], bl[j]] = [bl[j], bl[i]]; x.plan = L.blocksToPlan(bl); save(); render(); },
   delPe: d => { state.peOpen = null; progById(d.pid).days[+d.d].ex.splice(+d.i, 1); save(); render(); },
   // Fremgang
   openExercise: d => { closeSheet(); push({ type: 'exercise', exId: d.ex }); },
@@ -1200,6 +1329,14 @@ const CHANGE = {
   woSet: (d, el) => { const s = P().workouts.find(x => x.id === d.wid)?.exercises[+d.ei]?.sets[+d.si]; if (!s) return; s[d.f] = num(el.value); el.value = fmtIn(s[d.f]); save(); },
   progField: (d, el) => { progById(d.pid)[d.f] = el.value; save(); },
   dayName: (d, el) => { progById(d.pid).days[+d.d].name = el.value || 'Dag'; save(); },
+  planField: (d, el) => {
+    const x = progById(d.pid).days[+d.d].ex[+d.i], bl = L.planToBlocks(x.plan || []), b = bl[+d.b], seg = b?.segs[+d.s]; if (!b) return;
+    if (d.f === 'n') b.n = Math.max(1, Math.min(30, Math.round(num(el.value) || 1)));
+    else if (seg && d.f === 't') seg.t = el.value.trim().replace(/ \d+\/\d+$/, '') || 'Fase';
+    else if (seg && d.f === 'm') seg.s = Math.max(1, Math.round(num(el.value) || 1)) * 60;
+    else if (seg && d.f === 'z') { seg.z = el.value; delete seg.alt; }
+    x.plan = L.blocksToPlan(bl); save(); render();
+  },
   peField: (d, el) => {
     const x = progById(d.pid).days[+d.d].ex[+d.i];
     if (d.f === 'rule' || d.f === 'ss' || d.f === 'note') x[d.f] = el.value;
@@ -1208,7 +1345,8 @@ const CHANGE = {
     save(); render();
   },
   profName: (d, el) => { P().name = el.value.trim() || 'Meg'; save(); },
-  hrMax: (d, el) => { const v = Math.round(num(el.value) || 0); P().hrMax = v >= 120 && v <= 230 ? v : null; save(); },
+  hrMax: (d, el) => { const v = Math.round(num(el.value) || 0); P().hrMax = v >= 120 && v <= 230 ? v : null; save(); render(); },
+  birthYear: (d, el) => { const v = Math.round(num(el.value) || 0), y = new Date().getFullYear(); P().birthYear = v >= y - 100 && v <= y - 5 ? v : null; save(); render(); },
   setting: (d, el) => { const s = db.settings; s[d.f] = d.f === 'rest' ? (num(el.value) || 120) : d.f === 'theme' ? el.value : el.value === '1'; save(); render(); },
   plateImpl: (d, el) => { state.plateImpl = el.value; render(); },
   plateW: (d, el) => { state.plateW = el.value; render(); },
@@ -1236,6 +1374,7 @@ document.addEventListener('input', e => {
         const pl = document.getElementById(`pl-${ei}-${j}`); if (pl) pl.textContent = setSub(impl, e.sets[j]);
       });
     }
+    const pc = document.getElementById(`pace-${ei}`); if (pc) pc.textContent = paceLine(s);
     save();
   } else if (el.dataset.filter) {
     const q = el.value.toLowerCase().trim();

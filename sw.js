@@ -1,7 +1,7 @@
 // Nettverk først (så oppdateringer kommer med en gang), men med kort frist: svarer ikke nettet innen
 // NET_MS brukes cachen, så appen ikke henger i en garasje med dårlig dekning. Nettet fortsetter i
 // bakgrunnen og oppdaterer cachen til neste gang.
-const CACHE = 'garasjegym-v10';
+const CACHE = 'garasjegym-v11';
 const NET_MS = 2500;
 const FILES = ['./', './index.html', './logic.js', './data.js', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png'];
 

@@ -40,6 +40,15 @@ Adressen er offentlig, men ingen treningsdata ligger der. Dataene lagres bare p�
    - om dere har benk
 3. **Program:** Velg en mal, eller lag et eget program.
 
+## Puls og kondisjon
+
+- **Mer → Profil:** Legg inn fødselsår, så anslås makspuls (211 − 0,64 × alder). Har du målt høyere på en hard økt, skriv inn den. Trykk «Vis pulssonene» for Olympiatoppens fem soner i slag/min.
+- Sonene er prosent av *din* makspuls og gjelder uansett treningsnivå. Som utrent bør det meste ligge i sone 1–2.
+- **Varighet:** På jevne økter (rolig jogg, langtur) kan hovedfasen justeres før start med −5/+5 eller faste valg (20–90 min). Valget huskes i programmet.
+- **Egne intervaller:** Program → åpne økta → faser kan redigeres (navn, minutter, sone), og «+ Intervallbolk» lager gjentak som 6 × [Drag 3:00, Pause 2:00].
+- **Fullskjerm:** Under intervalltimeren, trykk ⤢ for stor klokke, sone og puls som kan leses fra mølla. Tilbake-knappen lukker.
+- **Fremgang** viser km per uke, tid i pulssone denne uka og tempoutvikling når det finnes løpeturer.
+
 ## Under økta
 
 - Et sett hukes av med ✓ etter at vekt og reps er skrevet inn. Tallet som ligger i feltet fra før er et *mål* (forslag), ikke et resultat.
