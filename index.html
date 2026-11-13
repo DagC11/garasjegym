@@ -69,6 +69,8 @@ label.f { display:block; font-size:13px; color:var(--muted); margin:10px 0 4px; 
 .setno { height:50px; border-radius:10px; font-weight:700; color:var(--muted); background:var(--card2); }
 .setrow.warm .setno { color:var(--warm); }
 .wohead .grow { min-width:0; } .wohead h1 { font-size:22px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cardopts { background:var(--card2); border-radius:10px; padding:2px 12px; margin:8px 0 10px; }
+.cardopts select { background:var(--card); min-width:120px; width:auto; }
 /* Puls */
 :root { --z1:#5b8def; --z2:#2fa865; --z3:#d9a521; --z4:#e5702a; --z5:#d63b3b; }
 .hrpill { display:inline-flex; align-items:center; gap:4px; height:36px; padding:0 10px; border-radius:18px; background:var(--card2); border:1px solid var(--line); font-size:14px; color:var(--muted); white-space:nowrap; }
@@ -313,6 +315,7 @@ function load() {
   for (const k in DEFAULT_IMPL) if (!db.settings.impl[k]) db.settings.impl[k] = clone(DEFAULT_IMPL[k]);
   if (db.settings.impl.barbell.name === 'Olympisk stang (20 kg)') db.settings.impl.barbell.name = 'Olympisk stang';
   for (const e of db.settings.customEx || []) { e.prim = (e.prim || []).map(m => OLD_MUS[m] || m); e.sec = (e.sec || []).map(m => OLD_MUS[m] || m); }
+  if (!db.settings.vest) db.settings.vest = { has: true, max: 20 };
   if (db.settings.landmine === undefined) db.settings.landmine = false; // landmine-røret fulgte det gamle racket
   if (db.settings.impl.cable.name === 'Nedtrekk / roing') db.settings.impl.cable.name = 'Nedtrekksapparat (90 kg)';
   for (const p of Object.values(db.profiles)) { if (!p.mig?.pr550) { migratePR550(p); (p.mig = p.mig || {}).pr550 = true; } }
@@ -648,7 +651,7 @@ function programCard(prog) {
   if (!prog.days.length) return `<div class="card"><div class="muted small">${esc(prog.name)}</div><p class="muted">Programmet har ingen dager ennå.</p><button class="btn" data-act="editProgram" data-pid="${prog.id}">Legg til dager</button></div>`;
   const di = Math.min(p.progState[prog.id] || 0, prog.days.length - 1), d = prog.days[di], labels = ssLabels(d.ex);
   const onlyCardio = d.ex.every(x => EX(x.exId).type === 'cardio');
-  const body = onlyCardio ? d.ex.map(x => planCompact(x.plan)).join('') :
+  const body = onlyCardio ? d.ex.map(x => planCompact(x.plan) + (x.vest ? `<div class="muted small" style="margin-top:6px">Vektvest ${x.vest} kg</div>` : '')).join('') :
     `<div class="exlist">${d.ex.map((x, i) => { const ex = EX(x.exId), s = suggest(x, ex, p);
       const tgt = ex.type === 'cardio' ? (x.plan ? Math.round(planSec(x.plan) / 60) + ' min' : 'Kondisjon') : `${x.sets} × ${x.min === x.max ? x.min : x.min + '–' + x.max}${ex.type === 'time' ? ' s' : ''}`;
       const w = `<span class="exw ${s.tone || ""}">${s.w ? fmt(s.w) + " kg" + (s.tone === "up" ? " ↑" : s.tone === "down" ? " ↓" : "") : ""}</span>`;
@@ -701,7 +704,7 @@ function buildEntry(p, exId, pex) {
   const ex = EX(exId), s = suggest(pex, ex, p);
   const n = ex.type === 'cardio' ? 1 : pex.sets;
   const tr0 = ex.type === 'cardio' && pex.plan ? String(Math.round(planSec(pex.plan) / 60)) : null;
-  return { exId, pe: clone(pex), note: s.note, tone: s.tone || '', sets: Array.from({ length: n }, (_, i) => ({ w: tr0 ? '' : fmtIn(s.w), r: '', tr: tr0 ?? String(s.reps[i] ?? ''), done: false, warm: false })) };
+  return { exId, pe: clone(pex), vest: pex.vest || 0, note: s.note, tone: s.tone || '', sets: Array.from({ length: n }, (_, i) => ({ w: tr0 ? '' : fmtIn(s.w), r: '', tr: tr0 ?? String(s.reps[i] ?? ''), done: false, warm: false })) };
 }
 function startWorkout(prog, di) {
   const p = prof();
@@ -741,7 +744,7 @@ function exCard(e, ei) {
     ${x.note ? (x.note.length > 90 ? `<div class="cue clamp" data-act="cueToggle">${esc(x.note)}</div>` : `<div class="cue">${esc(x.note)}</div>`) : ''}
     ${e.note ? `<div class="note ${e.tone}">${esc(e.note)}</div>` : ''}
     ${altsFor(e.exId).length && !e.sets.some(s => s.done) ? `<div class="row wrap" style="margin:8px 0"><span class="muted small">Bytt til:</span>${altsFor(e.exId).map(id => `<button class="chip" data-act="altEx" data-ei="${ei}" data-id="${id}">${esc(EX(id).name)}</button>`).join('')}</div>` : ''}
-    ${(() => { const alt = x.plan?.find(s => s.alt); return alt && !ivOn ? `<div class="row wrap" style="margin:8px 0"><span class="muted small">Velg sone for ${esc(alt.t.toLowerCase())}:</span>${alt.alt.map(z => `<button class="chip ${alt.z === z ? 'on' : ''}" data-act="ivZone" data-ei="${ei}" data-z="${z}">Sone ${z}</button>`).join('')}</div>` : ''; })()}
+    ${ex.impl === 'treadmill' && (!x.plan || planSec(x.plan) >= 15 * 60) ? cardioOpts(e, ei, ivOn) : ''}
     ${x.plan?.length ? (ivOn ? '' : durationRow(x, ei)) + planSummary(x.plan) + (ivOn ? '' :`<button class="btn acc big" style="margin-bottom:10px" data-act="ivStart" data-ei="${ei}">▶ Start intervalltimer (${Math.round(planSec(x.plan) / 60)} min)</button>`) : ''}
     ${ex.type === 'cardio' ? cardioInputs(e, ei) : `<div class="setgrid sethead"><span>Sett</span><span>${c1}</span><span>${c2}</span><span></span></div>
     ${e.sets.map((s, si) => { const label = s.warm ? 'O' : String(++n);
@@ -754,6 +757,23 @@ function exCard(e, ei) {
     <div class="row" style="margin-top:10px"><button class="btn sm" data-act="addSet" data-ei="${ei}">+ Sett</button>
     ${impl.kind !== 'added' && ex.type === 'reps' ? `<button class="btn sm" data-act="warmup" data-ei="${ei}">+ Oppvarming</button>` : ''}</div>`}
   </div>`;
+}
+// Tredemølle: vektvest (kg) og pulssone per fasetype (Drag, Pause, Langtur …). Valgene huskes i programmet.
+const planBase = t => t.replace(/ \d+\/\d+$/, '');
+const activeProgEx = (a, e) => { const pd = a.programId && progById(a.programId)?.days[a.dayIdx]; return pd?.ex.find(x => x.exId === e.exId && (!!x.plan === !!e.pe.plan)); };
+function cardioOpts(e, ei, ivOn) {
+  const v = db.settings.vest, rows = [];
+  if (v?.has) rows.push(`<div class="setrow2"><span>Vektvest</span><select data-change="vest" data-ei="${ei}" aria-label="Vektvest"><option value="0">Uten</option>${Array.from({ length: v.max }, (_, i) => i + 1).map(k => `<option value="${k}" ${+e.vest === k ? 'selected' : ''}>${k} kg</option>`).join('')}</select></div>`);
+  if (e.pe.plan?.length && !ivOn) {
+    const seen = new Set();
+    rows.push('<div class="muted tiny" style="padding:10px 0 0">PULSSONE PER FASE</div>');
+    for (const s of e.pe.plan) {
+      const b = planBase(s.t); if (seen.has(b)) continue; seen.add(b);
+      const opts = ZONE_OPTS.includes(s.z) ? ZONE_OPTS : ZONE_OPTS.concat(s.z);
+      rows.push(`<div class="setrow2"><span>${esc(b)}</span><select data-change="planZone" data-ei="${ei}" data-b="${esc(b)}" aria-label="Pulssone for ${esc(b)}">${opts.map(z => `<option value="${z}" ${s.z === z ? 'selected' : ''}>Sone ${z.replace('-', '–')}</option>`).join('')}</select></div>`);
+    }
+  }
+  return rows.length ? `<div class="cardopts">${rows.join('')}</div>` : '';
 }
 // Kondisjon: ett felt-par (minutter, km) med tempo, i stedet for sett-rutenettet
 function cardioInputs(e, ei) {
@@ -996,6 +1016,7 @@ function viewWorkoutDetail({ wid }) {
         <button class="iconbtn danger" data-act="delWoSet" data-wid="${wid}" data-ei="${ei}" data-si="${si}" aria-label="Slett sett">${icon('trash', 18)}</button>
         ${ex.type === 'cardio' && num(s.r) ? `<span></span><div class="plates">${paceText(num(s.w), num(s.r))}</div>` : ''}</div>`; };
     return `<div class="card"><button data-act="openExercise" data-ex="${e.exId}" style="text-align:left;padding:0"><h3>${esc(ex.name)} <span class="muted" style="font-weight:400">ⓘ</span></h3></button>
+      ${e.vest ? `<div class="muted small" style="margin:-4px 0 8px">Vektvest ${e.vest} kg</div>` : ''}
       <div class="setgrid sethead"><span>Sett</span><span>${c1}</span><span>${c2}</span><span></span></div>${e.sets.map(row).join('')}</div>`;
   };
   return `${backBtn()}<h1>${esc(w.name)}</h1><div class="muted" style="margin:-8px 0 12px">${fmtDate(w.date)} kl. ${new Date(w.date).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' })}${w.end ? ' · ' + Math.round((w.end - w.date) / 60000) + ' min' : ''}</div>
@@ -1064,6 +1085,8 @@ function viewEquipment() {
       <div class="muted small" style="margin-top:8px">Totalt: ${fmt(plates.reduce((a, p) => a + p * (+s.plates[String(p)] || 0), 0))} kg</div></div>
     <div class="card"><h3>Benk og rack</h3><label class="f">Har dere flat/skrå benk?</label><select data-change="setting" data-f="bench"><option value="1" ${s.bench ? 'selected' : ''}>Ja</option><option value="0" ${!s.bench ? "selected" : ""}>Nei – skjul benkøvelser</option></select>
       <label class="f">Har dere landmine-tilbehør?</label><select data-change="setting" data-f="landmine"><option value="1" ${s.landmine ? "selected" : ""}>Ja</option><option value="0" ${!s.landmine ? "selected" : ""}>Nei – skjul T-bar roing og landmine press</option></select></div>
+    <div class="card"><h3>Vektvest</h3><label class="f">Har dere vektvest?</label><select data-change="vestHas"><option value="1" ${s.vest.has ? "selected" : ""}>Ja – vis valg på tredemølleøkter</option><option value="0" ${!s.vest.has ? "selected" : ""}>Nei</option></select>
+      <label class="f">Maks vekt (kg)</label><input inputmode="numeric" data-change="vestMax" value="${s.vest.max}"></div>
     <div class="card"><h3>Stenger og maskiner med skiver</h3><div class="muted small">Startvekt = stang/slede uten skiver. «Sider» = 2 hvis skivene lastes likt på begge sider, 1 hvis ett horn. Sett startvekt 0 for maskiner der dere bare vil logge skivene.</div>
       ${Object.entries(s.impl).filter(([, i]) => i.kind === 'plates').map(([k, i]) => `<div style="margin-top:12px"><b>${esc(i.name)}</b><div class="pe-grid" style="grid-template-columns:1fr 1fr"><div><label>Startvekt kg</label><input inputmode="decimal" data-change="implField" data-k="${k}" data-f="base" value="${fmtIn(i.base)}"></div><div><label>Sider</label><select data-change="implField" data-k="${k}" data-f="sides"><option value="2" ${i.sides === 2 ? 'selected' : ''}>2</option><option value="1" ${i.sides === 1 ? 'selected' : ''}>1</option></select></div></div></div>`).join('')}</div>
     <div class="card"><h3>Nedtrekk / roing</h3><div class="pe-grid" style="grid-template-columns:1fr 1fr"><div><label>Steg kg</label><input inputmode="decimal" data-change="implField" data-k="cable" data-f="step" value="${fmtIn(s.impl.cable.step)}"></div><div><label>Maks kg</label><input inputmode="decimal" data-change="implField" data-k="cable" data-f="max" value="${fmtIn(s.impl.cable.max)}"></div></div></div>
@@ -1180,7 +1203,7 @@ const ACT = {
   finish: () => {
     const p = P(), a = p.active;
     // Bare det som trengs i historikken lagres (ikke programoppsettet), så localStorage ikke fylles opp
-    const exs = a.exercises.map(e => ({ exId: e.exId, sets: e.sets.filter(s => s.done).map(s => ({ w: num(s.w), r: num(s.r), warm: !!s.warm, done: true, ...(s.rir != null ? { rir: s.rir } : {}) })) })).filter(e => e.sets.length);
+    const exs = a.exercises.map(e => ({ exId: e.exId, ...(+e.vest ? { vest: +e.vest } : {}), sets: e.sets.filter(s => s.done).map(s => ({ w: num(s.w), r: num(s.r), warm: !!s.warm, done: true, ...(s.rir != null ? { rir: s.rir } : {}) })) })).filter(e => e.sets.length);
     if (!exs.length) return ask({ title: 'Ingen sett er huket av', text: 'Forkaste økta?', ok: 'Forkast', danger: true, onOk: () => { p.active = null; releaseWake(); save(); render(); } });
     const undone = a.exercises.reduce((n, e) => n + e.sets.filter(s => !s.done && !s.warm).length, 0);
     if (undone) return ask({ title: `${undone} sett er ikke huket av`, text: 'De blir ikke lagret. Fullføre likevel?', ok: 'Fullfør', onOk: () => ACT.finishSave(exs) });
@@ -1366,6 +1389,13 @@ const CHANGE = {
     save(); render();
   },
   profName: (d, el) => { P().name = el.value.trim() || 'Meg'; save(); },
+  vest: (d, el) => { const a = P().active, e = a.exercises[+d.ei]; e.vest = +el.value; const px = activeProgEx(a, e); if (px) px.vest = e.vest; save(); render(); },
+  planZone: (d, el) => {
+    const a = P().active, e = a.exercises[+d.ei], set = pl => (pl || []).forEach(s => { if (planBase(s.t) === d.b) { s.z = el.value; delete s.alt; } });
+    set(e.pe.plan); set(activeProgEx(a, e)?.plan); save(); render();
+  },
+  vestHas: (d, el) => { db.settings.vest.has = el.value === '1'; save(); render(); },
+  vestMax: (d, el) => { db.settings.vest.max = Math.min(40, Math.max(1, Math.round(num(el.value) || 20))); save(); render(); },
   hrMax: (d, el) => { const v = Math.round(num(el.value) || 0); P().hrMax = v >= 120 && v <= 230 ? v : null; save(); render(); },
   birthYear: (d, el) => { const v = Math.round(num(el.value) || 0), y = new Date().getFullYear(); P().birthYear = v >= y - 100 && v <= y - 5 ? v : null; save(); render(); },
   setting: (d, el) => { const s = db.settings; s[d.f] = d.f === 'rest' ? (num(el.value) || 120) : d.f === 'theme' ? el.value : el.value === '1'; save(); render(); },

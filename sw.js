@@ -2,7 +2,7 @@
 // Derfor hentes alle filene samlet når en ny versjon av sw.js oppdages (install), og de serveres
 // fra cache (cache først). Da kan ikke en ny index.html møte en gammel logic.js. Nettleseren sjekker
 // sw.js mot nettet ved hver åpning, så en ny versjon tas i bruk neste gang appen åpnes med nett.
-const CACHE = 'garasjegym-v12';
+const CACHE = 'garasjegym-v13';
 const FILES = ['./', './index.html', './logic.js', './data.js', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
